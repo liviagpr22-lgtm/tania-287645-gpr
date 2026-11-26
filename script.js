@@ -1,4 +1,4 @@
-const VERSAO_SCRIPT_ATUAL = 48;
+const VERSAO_SCRIPT_ATUAL = 49;
 
 // Abertura pelo arquivo (file://) nao consegue chamar a API. Avisa e usa o atalho.
 if (!/^https?:$/.test(location.protocol)) {
@@ -182,6 +182,8 @@ async function adicionarCarrinhoRapido(id) {
 }
 
 async function abrirDetalhe(id) {
+  const painelAnterior = document.getElementById('detalhe-panel');
+  if (painelAnterior) painelAnterior.remove();
   const usuario = await obterUsuarioAtual();
   if (!usuario) { abrirAuth('detalhe', { id: id }); return; }
   const p = produtos.find(x => x.id === id);
@@ -233,6 +235,19 @@ async function abrirDetalhe(id) {
   </div>`;
   document.body.appendChild(painelEl);
   document.body.style.overflow = 'hidden';
+}
+
+function fecharDetalhe() {
+  const painel = document.getElementById('detalhe-panel');
+  if (painel) painel.remove();
+  const carrinho = document.getElementById('carrinho');
+  const busca = document.getElementById('busca');
+  const haOutroOverlay = document.getElementById('auth-panel') ||
+    document.getElementById('pedido-panel') ||
+    document.getElementById('observacao-panel') ||
+    (carrinho && !carrinho.hidden) ||
+    (busca && !busca.hidden);
+  document.body.style.overflow = haOutroOverlay ? 'hidden' : '';
 }
 
 function acaoDetalhe(id) {
