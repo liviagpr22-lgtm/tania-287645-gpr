@@ -3,6 +3,9 @@
   functions = "netlify/functions"
   command = "node netlify/preparar.js"
 
+[functions]
+  included_files = ["server/schema.sql", "produtos.json"]
+
 [build.environment]
   NODE_VERSION = "22.16.0"
   NODE_ENV = "production"
