@@ -25,18 +25,20 @@ async function prepararBanco(event, id) {
   fs.mkdirSync(tmp, { recursive: true });
   const destino = path.join(tmp, 'tania.db');
   const store = storeStrong(event);
-  const blob = await store.get(CHAVE_BANCO, { type: 'arrayBuffer' });
+  const entrada = await store.getWithMetadata(CHAVE_BANCO, { type: 'arrayBuffer' });
+  const blob = entrada && entrada.data;
   if (blob && blob.byteLength) {
     fs.writeFileSync(destino, Buffer.from(blob));
   } else {
     if (!bancoInicial) bancoInicial = require('./db-inicial');
     fs.writeFileSync(destino, Buffer.from(bancoInicial, 'base64'));
   }
+  const etag = entrada && entrada.etag ? entrada.etag : null;
   process.env.TANIA_DB_PATH = destino;
   process.env.TANIA_SNAPSHOT_PATH = path.join(tmp, 'dados-snapshot.js');
   process.env.TANIA_SERVERLESS = '1';
   process.env.NODE_ENV = 'production';
-  return { store, destino, tmp };
+  return { store, destino, tmp, etag };
 }
 
 function respostaEventos() {
@@ -80,30 +82,46 @@ exports.handler = async (event, context) => {
     return respostaImagem(event);
   }
 
-  const id = (context && context.awsRequestId) || Date.now().toString() + Math.random().toString(36).slice(2);
-  const { store, destino, tmp } = await prepararBanco(event, id);
+  // Somente operacoes que alteram dados podem gravar o banco. Regravar o Blob
+  // em cada GET fazia com que uma leitura desatualizada apagasse escritas recentes.
+  const gravar = ['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(metodo) !== -1;
+  const tentativas = gravar ? 3 : 1;
 
-  let resposta;
-  try {
-    limparCacheDoServidor();
-    const app = require('../../server');
-    if (typeof app.iniciar === 'function') app.iniciar();
-    const handler = serverless(app);
-    resposta = await handler(event, context);
-  } catch (erro) {
-    console.error('Erro na funcao:', erro);
-    resposta = { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ erro: 'Erro interno' }) };
-  } finally {
+  for (let tentativa = 0; tentativa < tentativas; tentativa++) {
+    const id = (context && context.awsRequestId || Date.now().toString()) + '-' + tentativa + '-' + Math.random().toString(36).slice(2);
+    const { store, destino, tmp, etag } = await prepararBanco(event, id);
+
+    let resposta;
+    let conflito = false;
     try {
-      const moduloBanco = require('../../server/db');
-      try { moduloBanco.db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch (e) {}
-      try { moduloBanco.db.close(); } catch (e) {}
-      await store.set(CHAVE_BANCO, fs.readFileSync(destino));
+      limparCacheDoServidor();
+      const app = require('../../server');
+      if (typeof app.iniciar === 'function') app.iniciar();
+      const handler = serverless(app);
+      resposta = await handler(event, context);
     } catch (erro) {
-      console.error('Erro ao gravar banco:', erro);
-      resposta = { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ erro: 'Falha ao salvar dados' }) };
+      console.error('Erro na funcao:', erro);
+      resposta = { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ erro: 'Erro interno' }) };
+    } finally {
+      try {
+        const moduloBanco = require('../../server/db');
+        try { moduloBanco.db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch (e) {}
+        try { moduloBanco.db.close(); } catch (e) {}
+        if (gravar && resposta && resposta.statusCode < 400) {
+          const opcoes = etag ? { onlyIfMatch: etag } : { onlyIfNew: true };
+          const resultado = await store.set(CHAVE_BANCO, fs.readFileSync(destino), opcoes);
+          if (resultado && resultado.modified === false) conflito = true;
+        }
+      } catch (erro) {
+        console.error('Erro ao gravar banco:', erro);
+        resposta = { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ erro: 'Falha ao salvar dados' }) };
+      }
+      try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) {}
     }
-    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) {}
+
+    if (conflito) {
+      resposta = { statusCode: 409, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ erro: 'Dados alterados por outra acao. Tente novamente.' }) };
+    }
+    if (!conflito || tentativa === tentativas - 1) return resposta;
   }
-  return resposta;
 };
