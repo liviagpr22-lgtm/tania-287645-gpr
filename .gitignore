@@ -7,3 +7,6 @@ data/tania.db-wal
 data/tania-inicial.db-shm
 data/tania-inicial.db-wal
 .env
+
+# Local Netlify folder
+.netlify

@@ -10,7 +10,7 @@ let bancoInicial = null;
 
 function storeStrong(event) {
   connectLambda(event);
-  return getStore({ name: NOME_STORE, consistency: 'strong' });
+  return getStore({ name: NOME_STORE });
 }
 
 function limparCacheDoServidor() {
