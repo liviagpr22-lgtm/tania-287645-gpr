@@ -53,12 +53,16 @@ router.get('/api/admin/categorias', requireAdmin, (req, res) => {
 router.post('/api/admin/categorias', requireAdmin, (req, res) => {
   const { nome, parent_id, ordem } = req.body || {};
   if (!nome || !String(nome).trim()) return res.status(400).json({ erro: 'Nome obrigatorio' });
-  const slug = slugify(nome);
+  const pai = Number(parent_id);
+  if (!pai) return res.status(400).json({ erro: 'Escolha a categoria principal.' });
   try {
+    const principal = db.prepare('SELECT id FROM categories WHERE id = ? AND ativa = 1 AND parent_id IS NULL').get(pai);
+    if (!principal) return res.status(400).json({ erro: 'Categoria principal invalida.' });
+    const slug = slugify(nome);
     const info = db.prepare('INSERT INTO categories (slug, nome, parent_id, ordem) VALUES (?,?,?,?)')
-      .run(slug, String(nome).trim(), parent_id || null, Number(ordem) || 0);
+      .run(slug, String(nome).trim(), principal.id, Number(ordem) || 0);
     notificarCatalogo('categorias');
-    res.status(201).json({ id: info.lastInsertRowid, slug, nome: String(nome).trim(), parent_id: parent_id || null });
+    res.status(201).json({ id: info.lastInsertRowid, slug, nome: String(nome).trim(), parent_id: principal.id });
   } catch (e) { res.status(400).json({ erro: e.message }); }
 });
 
@@ -88,6 +92,9 @@ router.put('/api/admin/categorias/:id', requireAdmin, (req, res) => {
 router.delete('/api/admin/categorias/:id', requireAdmin, (req, res) => {
   const id = Number(req.params.id);
   try {
+    const cat = db.prepare('SELECT id, parent_id FROM categories WHERE id = ?').get(id);
+    if (!cat) return res.status(404).json({ erro: 'Categoria nao encontrada' });
+    if (cat.parent_id === null) return res.status(400).json({ erro: 'Categorias principais nao podem ser arquivadas.' });
     db.prepare('UPDATE categories SET ativa = 0 WHERE id = ?').run(id);
     notificarCatalogo('categorias');
     res.json({ ok: true });

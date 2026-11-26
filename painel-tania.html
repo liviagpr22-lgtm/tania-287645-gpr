@@ -55,7 +55,7 @@
   <!-- Categorias -->
   <section class="admin-card">
     <h2>Categorias <button type="button" class="btn-mini" style="margin-left:8px;" onclick="carregarCategoriasAdmin()">Atualizar</button></h2>
-    <p class="card-desc">Categorias visíveis e acessíveis diretamente. Clique para ver os produtos de cada uma.</p>
+    <p class="card-desc">As categorias principais são as que aparecem na tela inicial. Aqui você cria apenas categorias secundárias dentro delas.</p>
     <div id="categoriasAdminLista" class="categorias-grid"></div>
     <form id="formCategoria" onsubmit="adicionarCategoria(event); return false;" class="cat-form">
       <div>
@@ -63,10 +63,8 @@
         <input type="text" id="novaCategoriaNome" placeholder="Ex.: Brincos" required>
       </div>
       <div>
-        <label for="novaCategoriaPai">Categoria pai (opcional)</label>
-        <select id="novaCategoriaPai">
-          <option value="">Nenhuma (principal)</option>
-        </select>
+        <label for="novaCategoriaPai">Categoria principal</label>
+        <select id="novaCategoriaPai" required></select>
       </div>
       <div>
         <label for="novaCategoriaOrdem">Ordem</label>
@@ -317,7 +315,7 @@ async function carregarCategoriasAdmin() {
       html += '<div class="categoria-card" style="flex-direction:column;align-items:flex-start;">' +
         '<div style="display:flex;justify-content:space-between;width:100%;align-items:center;">' +
         '<div><div class="cat-nome">' + main.nome + '</div><div class="cat-count">' + totalMain + ' produto(s) (inclui subcategorias)</div></div>' +
-        '<button class="btn-mini perigo" onclick="arquivarCategoria(' + main.id + ')">Arquivar</button>' +
+        '<span style="font-size:11px;color:#A65365;font-weight:600;">Fixa na inicial</span>' +
         '</div>';
       if (filhas.length) {
         html += '<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;width:100%;">';
@@ -361,12 +359,12 @@ async function adicionarCategoria(event) {
   const ordem = Number(document.getElementById('novaCategoriaOrdem').value || 0);
   const pai = document.getElementById('novaCategoriaPai').value;
   if (!nome) return;
+  if (!pai) { alert('Escolha a categoria principal.'); return; }
   try {
-    const r = await fetch('api/admin/categorias', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome, ordem: ordem, parent_id: pai ? Number(pai) : null }) });
+    const r = await fetch('api/admin/categorias', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome, ordem: ordem, parent_id: Number(pai) }) });
     const d = await r.json();
     if (r.ok) {
       document.getElementById('novaCategoriaNome').value = '';
-      document.getElementById('novaCategoriaPai').value = '';
       carregarCategoriasAdmin();
       popularCategoriasForm();
       if (typeof atualizarAposEventoCatalogo === 'function') atualizarAposEventoCatalogo();
@@ -376,6 +374,11 @@ async function adicionarCategoria(event) {
   } catch (e) { alert('Erro de conexao.'); }
 }
 async function arquivarCategoria(id) {
+  try {
+    const cats = await (await fetch('api/admin/categorias', { credentials: 'same-origin', cache: 'no-store' })).json();
+    const cat = (Array.isArray(cats) ? cats : []).find(function (c) { return Number(c.id) === Number(id); });
+    if (cat && !cat.parent_id) { alert('Categorias principais não podem ser arquivadas.'); return; }
+  } catch (e) {}
   if (!confirm('Arquivar esta categoria?')) return;
   try {
     const r = await fetch('api/admin/categorias/' + id, { method: 'DELETE', credentials: 'same-origin' });
@@ -390,13 +393,14 @@ function popularCategoriasPai(cats) {
   const sel = document.getElementById('novaCategoriaPai');
   if (!sel) return;
   const atual = sel.value;
-  let html = '<option value="">Nenhuma (principal)</option>';
-  const principais = cats.filter(function (c) { return !c.parent_id && c.ativa; });
-  for (const main of principais) {
-    html += '<option value="' + main.id + '">' + main.nome + '</option>';
-  }
-  sel.innerHTML = html;
-  sel.value = atual;
+  const principais = cats.filter(function (c) { return !c.parent_id && c.ativa; })
+    .slice()
+    .sort(function (a, b) { return (Number(a.ordem) || 0) - (Number(b.ordem) || 0); });
+  if (!principais.length) { sel.innerHTML = ''; return; }
+  sel.innerHTML = principais.map(function (main) {
+    return '<option value="' + main.id + '">' + esc(main.nome) + '</option>';
+  }).join('');
+  sel.value = principais.some(function (c) { return String(c.id) === String(atual); }) ? atual : String(principais[0].id);
 }
 
 async function popularCategoriasForm() {
