@@ -692,13 +692,18 @@ function finalizarObservacao(comObservacao) {
 async function adicionarCarrinho(id, variacao) {
   const usuario = await obterUsuarioAtual();
   if (!usuario) {
-    const v = variacao ? { cor: variacao.cor, imagem: variacao.imagem } : null;
-    abrirAuth('carrinho', { id: id, variacao: v });
+    // Guarda a variação completa para que a ação pendente volta com estoque/cor corretos.
+    abrirAuth('carrinho', { id: id, variacao: variacao || null });
     return;
   }
   const p = produtos.find(x => x.id === id);
   if (!p) return;
-  const v = variacao ? variacao : (window.variacaoAtual || (p.variacoes ? p.variacoes[0] : null));
+  let v = variacao ? variacao : (window.variacaoAtual || (p.variacoes ? p.variacoes[0] : null));
+  // Se a variação veio de uma ação pendente antiga (sem estoque), resolve pela cor no catálogo atual.
+  if (variacao && variacao.cor && p.variacoes) {
+    const correspondente = p.variacoes.find(x => x.cor === variacao.cor);
+    if (correspondente) v = correspondente;
+  }
   if (estoqueDisponivel(v || p) <= 0) {
     mostrarToast('Produto esgotado. Toque em Solicitar para entrar na lista de espera.');
     return;
