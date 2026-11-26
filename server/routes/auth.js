@@ -43,8 +43,8 @@ router.post('/api/auth/cadastro', authLimiter, (req, res) => {
   }
 
   const sess = auth.createSession(userId);
-  auth.setSessionCookie(res, sess.id, sess.expira);
   const user = db.prepare('SELECT id, nome, telefone, email, role FROM users WHERE id = ?').get(userId);
+  auth.setSessionCookie(res, auth.criarTokenSessao(user, sess.expira, sess.id), new Date(sess.expira));
   res.status(201).json({ ok: true, usuario: user });
 });
 
@@ -58,13 +58,13 @@ router.post('/api/auth/login', authLimiter, (req, res) => {
     return res.status(401).json({ erro: 'E-mail ou senha incorretos' });
   }
   const sess = auth.createSession(user.id);
-  auth.setSessionCookie(res, sess.id, sess.expira);
+  auth.setSessionCookie(res, auth.criarTokenSessao(user, sess.expira, sess.id), new Date(sess.expira));
   res.json({ ok: true, usuario: { id: user.id, nome: user.nome, telefone: user.telefone, email: user.email, role: user.role } });
 });
 
 router.post('/api/auth/logout', (req, res) => {
-  const id = req.cookies && req.cookies[auth.COOKIE_NAME];
-  auth.destroySession(id);
+  const usuario = auth.getSessionUser(req);
+  auth.destroySession(usuario && usuario.sid);
   auth.clearSessionCookie(res);
   res.json({ ok: true });
 });
