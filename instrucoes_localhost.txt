@@ -1,0 +1,12 @@
+Para rodar no localhost (Etapa 1 - arquitetura):
+1. Abra o terminal na pasta onde esta o index.html (a pasta do projeto).
+2. Rode: npm install   (apenas na primeira vez)
+3. Rode: npm start      (ou: node server.js)
+4. Acesse: http://localhost:8080
+
+O servidor agora serve os arquivos estaticos E a API de produtos (SQLite em data/tania.db).
+O seed inicial e executado automaticamente (idempotente) a partir de produtos.json.
+
+As imagens estao em: Produtos_imagens/
+
+Nao use "python -m http.server": ele nao implementa /api/produtos.

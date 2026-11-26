@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Painel administrativo | Tania Briet Acessorios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=16">
+<link rel="stylesheet" href="admin.css?v=16">
+</head>
+<body class="admin-body">
+
+<section id="telaLogin" class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo" aria-hidden="true">&#9829;</div>
+    <h1>Tania Briet</h1>
+    <p class="login-sub">Área administrativa</p>
+    <label for="emailAdmin">E-mail do administrador</label>
+    <input type="email" id="emailAdmin" placeholder="admin@taniabriet.com" autocomplete="username">
+    <label for="senha">Senha de acesso</label>
+    <input type="password" id="senha" placeholder="Digite a senha" autocomplete="current-password">
+    <button type="button" class="btn-principal" onclick="entrar()">Entrar</button>
+    <p id="erroLogin" class="erro-login"></p>
+  </div>
+</section>
+
+<main id="painel" class="admin-painel" style="display:none;">
+  <header class="admin-topo">
+    <div>
+      <p class="admin-eyebrow">Painel administrativo</p>
+      <h1>Tania Briet Acessorios</h1>
+      <p class="admin-sub">Gestão de produtos, pedidos, estoque e atendimento</p>
+    </div>
+    <button type="button" class="btn-secundario" onclick="sair()">Sair</button>
+  </header>
+
+  <p class="aviso-local">As alterações ficam salvas no sistema. Use “Baixar lista de produtos” para guardar uma cópia.</p>
+
+  <!-- Visao geral -->
+  <section class="admin-card">
+    <h2>Visão geral</h2>
+    <p class="card-desc">Resumo rápido da loja e acesso às principais áreas.</p>
+    <div class="dash-grid">
+      <div class="dash-item"><span>Produtos</span><strong id="dashProdutos">-</strong></div>
+      <div class="dash-item"><span>Categorias</span><strong id="dashCategorias">-</strong></div>
+      <div class="dash-item"><span>Pedidos</span><strong id="dashPedidos">0</strong></div>
+      <div class="dash-item"><span>Reservas</span><strong id="dashReservas">0</strong></div>
+      <div class="dash-item"><span>Estoque disponível</span><strong id="dashEstoque">-</strong></div>
+    </div>
+  </section>
+
+  <!-- Categorias -->
+  <section class="admin-card">
+    <h2>Categorias <button type="button" class="btn-mini" style="margin-left:8px;" onclick="carregarCategoriasAdmin()">Atualizar</button></h2>
+    <p class="card-desc">Categorias visíveis e acessíveis diretamente. Clique para ver os produtos de cada uma.</p>
+    <div id="categoriasAdminLista" class="categorias-grid"></div>
+    <form id="formCategoria" onsubmit="adicionarCategoria(event); return false;" class="cat-form">
+      <div>
+        <label for="novaCategoriaNome">Nova categoria</label>
+        <input type="text" id="novaCategoriaNome" placeholder="Ex.: Brincos" required>
+      </div>
+      <div>
+        <label for="novaCategoriaPai">Categoria pai (opcional)</label>
+        <select id="novaCategoriaPai">
+          <option value="">Nenhuma (principal)</option>
+        </select>
+      </div>
+      <div>
+        <label for="novaCategoriaOrdem">Ordem</label>
+        <input type="number" id="novaCategoriaOrdem" value="0" min="0">
+      </div>
+      <div>
+        <button type="submit" class="btn-principal" style="width:auto;padding:12px 22px;">Adicionar</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Ferramentas -->
+  <section class="admin-card">
+    <h2>Ferramentas</h2>
+    <p class="card-desc">Importação e exportação da lista de produtos.</p>
+    <div class="admin-ferramentas">
+      <button type="button" class="btn-secundario" onclick="exportarJSON()">Baixar lista de produtos</button>
+      <label class="btn-arquivo">Importar lista de produtos<input type="file" id="arquivoJSON" accept=".json,application/json" onchange="importarJSON(event)"></label>
+      <button type="button" class="btn-secundario" onclick="restaurarOriginais()">Restaurar originais</button>
+      <span id="resumo" class="resumo"></span>
+    </div>
+  </section>
+
+  <!-- Produtos -->
+  <section class="admin-card">
+    <h2>Produtos cadastrados</h2>
+    <p class="card-desc">Cadastro e edição de produtos. O código é único e identifica o produto.</p>
+    <div class="admin-colunas">
+      <section>
+        <h3 id="formTitulo" style="font-family:'Montserrat',sans-serif;font-size:22px;color:#49383D;margin-bottom:14px;">Novo produto</h3>
+        <form id="formProduto" onsubmit="salvarProduto(event); return false;">
+          <div class="form-grid">
+            <div class="full">
+              <label for="nome">Nome do produto</label>
+              <input type="text" id="nome" placeholder="Ex.: Bracelete Borboleta" required>
+            </div>
+            <div>
+              <label for="codigo">Código do produto</label>
+              <input type="text" id="codigo" placeholder="Ex.: P0001">
+            </div>
+            <div>
+              <label for="preco">Preço (R$)</label>
+              <input type="text" id="preco" inputmode="decimal" placeholder="79,90" required>
+            </div>
+            <div class="full">
+              <label for="descricao">Descrição</label>
+              <textarea id="descricao" rows="3" placeholder="Descreva o produto..."></textarea>
+            </div>
+            <div>
+              <label for="categoria">Categoria</label>
+              <select id="categoria"></select>
+            </div>
+            <div>
+              <label for="cor">Cor / Modelo (opcional)</label>
+              <input type="text" id="cor" placeholder="Ex.: Dourado com pedra verde">
+            </div>
+            <div class="full">
+              <button type="button" id="btnCores" class="btn-secundario" onclick="alternarCores()" style="width:100%;">Cores / modelos (fotos diferentes)</button>
+              <div id="secaoCores" style="display:none;margin-top:10px;padding:12px;border:1px dashed rgba(166,83,101,0.3);border-radius:12px;background:#FFFCFA;">
+                <p class="dica">Adicione cada cor ou modelo com sua própria foto. Ex.: Dourado, Prata, Rosa.</p>
+                <input type="text" id="corVariacao" placeholder="Nome da cor ou modelo" onkeydown="if(event.key==='Enter'){event.preventDefault();adicionarVariacao();}">
+                <input type="file" id="arquivoFotoVariacao" accept="image/*" onchange="aoEscolherFotoVariacao(this)" style="margin-top:8px;">
+                <input type="text" id="urlFotoVariacao" placeholder="URL da foto dessa cor (opcional)" oninput="aoDigitarUrlVariacao(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();adicionarVariacao();}" style="margin-top:8px;">
+                <img id="previewFotoVariacao" class="preview-foto" alt="Prévia da cor" style="display:none;max-height:90px;margin-top:8px;">
+                <button type="button" class="btn-mini" onclick="adicionarVariacao()" style="margin-top:8px;">Adicionar cor</button>
+                <div id="listaVariacoes"></div>
+              </div>
+            </div>
+            <div class="full" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
+              <label style="display:flex;align-items:center;gap:6px;margin:0;"><input type="checkbox" id="destaque" style="width:auto;"> Destacar na vitrine</label>
+              <label style="display:flex;align-items:center;gap:6px;margin:0;"><input type="checkbox" id="novidade" style="width:auto;"> Marcar como novidade</label>
+            </div>
+            <div class="full">
+              <label>Foto do produto</label>
+              <input type="file" id="arquivoFoto" accept="image/*" onchange="aoEscolherFoto(this)">
+              <p class="dica">Ou cole a URL de uma imagem:</p>
+              <input type="text" id="urlFoto" placeholder="https://..." oninput="aoDigitarUrl(this.value)">
+              <img id="previewFoto" class="preview-foto" alt="Prévia da foto" style="display:none;">
+            </div>
+          </div>
+          <button type="submit" id="btnSalvar" class="btn-principal">Adicionar produto</button>
+          <button type="button" class="btn-secundario" onclick="limparFormulario()" style="width:100%;margin-top:8px;">Limpar formulário</button>
+        </form>
+      </section>
+      <section>
+        <div class="filtros-linha">
+          <input type="text" id="filtroProdutoQ" placeholder="Buscar produto por nome ou código">
+          <select id="filtroProdutoCategoria">
+            <option value="">Todas as categorias</option>
+          </select>
+        </div>
+        <div id="listaProdutos" class="lista-produtos"></div>
+      </section>
+    </div>
+  </section>
+
+  <!-- Pedidos e reservas -->
+  <section class="admin-card" id="pedidos">
+    <h2>Pedidos e reservas</h2>
+    <p class="card-desc">Gerencie os pedidos recebidos pelo site. Altere o status de cada item.</p>
+    <div class="filtros-linha">
+      <input type="text" id="filtroPedidoQ" placeholder="Buscar cliente, código ou telefone">
+      <select id="filtroPedidoStatus">
+        <option value="">Todos os status</option>
+        <option>Solicitado</option><option>Reservado</option><option>Aguardando pagamento</option>
+        <option>Pago</option><option>Concluído/Entregue</option><option>Cancelado</option><option>Lista de espera</option>
+      </select>
+      <button class="btn-mini" onclick="carregarPedidosAdmin()">Filtrar</button>
+    </div>
+    <div id="pedidosAdminLista" style="max-height:62vh;overflow-y:auto;"></div>
+    <div class="status-legenda">
+      <div><strong>Solicitado</strong>Pedido recebido, ainda não reservado.</div>
+      <div><strong>Reservado</strong>Produto separado para a cliente.</div>
+      <div><strong>Aguardando pagamento</strong>Reserva feita, pagamento pendente.</div>
+      <div><strong>Pago</strong>Pagamento confirmado.</div>
+      <div><strong>Concluído/Entregue</strong>Pedido finalizado e entregue.</div>
+      <div><strong>Cancelado</strong>Pedido cancelado e estoque devolvido.</div>
+      <div><strong>Lista de espera</strong>Solicitação aguardando disponibilidade.</div>
+    </div>
+  </section>
+
+  <!-- Lista de espera -->
+  <section class="admin-card">
+    <h2>Lista de espera</h2>
+    <p class="card-desc">Solicitações de produtos sem estoque. Aprovar cria a reserva e consome estoque. Recusar encerra a solicitação. Deixe aguardando para manter na lista de espera.</p>
+    <div id="waitlistAdminLista" style="max-height:50vh;overflow-y:auto;"></div>
+  </section>
+
+  <!-- Registro manual de pedidos -->
+  <section class="admin-card">
+    <h2>Registro manual de pedidos</h2>
+    <p class="card-desc">Registre pedidos recebidos em atendimentos. Data e hora são registradas automaticamente.</p>
+    <form id="formLive" onsubmit="registrarLive(event); return false;" class="form-grid">
+      <div>
+        <label for="liveCliente">Cliente</label>
+        <input type="text" id="liveCliente" required>
+      </div>
+      <div>
+        <label for="liveTelefone">Telefone</label>
+        <input type="tel" id="liveTelefone">
+      </div>
+      <div>
+        <label for="liveProduto">Produto</label>
+        <select id="liveProduto" required></select>
+      </div>
+      <div>
+        <label for="liveVariacao">Variação</label>
+        <select id="liveVariacao" required></select>
+      </div>
+      <div>
+        <label for="liveQtd">Quantidade</label>
+        <input type="number" id="liveQtd" min="1" value="1" required>
+      </div>
+      <div>
+        <label for="liveStatus">Situação</label>
+        <select id="liveStatus">
+          <option>Solicitado</option><option>Reservado</option><option>Aguardando pagamento</option>
+          <option>Pago</option><option>Concluído/Entregue</option><option>Lista de espera</option>
+        </select>
+      </div>
+      <div class="full">
+        <label for="liveObs">Observação</label>
+        <textarea id="liveObs" rows="2"></textarea>
+      </div>
+      <div class="full">
+        <button type="submit" class="btn-principal">Registrar pedido</button>
+      </div>
+    </form>
+    <div id="msgLive" class="mensagem" style="display:none;position:static;transform:none;"></div>
+    <h3 style="font-family:'Montserrat',sans-serif;font-size:20px;color:#49383D;margin:16px 0 8px;">Pedidos registrados manualmente</h3>
+    <div id="livesLista" style="max-height:40vh;overflow-y:auto;"></div>
+  </section>
+
+  <!-- Cupons -->
+  <section class="admin-card" id="cupons">
+    <h2>Cupons de desconto</h2>
+    <p class="card-desc">Crie cupons com nome, valor em reais, validade e código. A cliente poderá digitar o código no carrinho antes de confirmar o pedido.</p>
+    <form id="formCupom" onsubmit="adicionarCupom(event); return false;" class="form-grid">
+      <div><label for="cupomNome">Nome do cupom</label><input type="text" id="cupomNome" required placeholder="Ex.: Cupom de aniversário"></div>
+      <div><label for="cupomCodigo">Código</label><input type="text" id="cupomCodigo" required placeholder="Ex.: TANIA10"></div>
+      <div><label for="cupomValor">Valor do desconto (R$)</label><input type="number" id="cupomValor" min="0.01" step="0.01" required placeholder="10,00"></div>
+      <div><label for="cupomValidade">Válido até (opcional)</label><input type="date" id="cupomValidade"></div>
+      <div class="full"><button type="submit" class="btn-principal">Adicionar cupom</button></div>
+    </form>
+    <div id="msgCupom" class="mensagem" style="display:none;position:static;transform:none;"></div>
+    <h3 style="font-family:'Montserrat',sans-serif;font-size:20px;color:#49383D;margin:16px 0 8px;">Cupons cadastrados</h3>
+    <div id="cuponsLista" style="max-height:40vh;overflow-y:auto;"></div>
+  </section>
+
+  <!-- Estoque -->
+  <section class="admin-card">
+    <h2>Estoque</h2>
+    <p class="card-desc">Quantidade disponível por variação. Informe a nova quantidade e salve.</p>
+    <div class="filtros-linha">
+      <input type="text" id="filtroEstoqueQ" placeholder="Buscar estoque por nome ou código">
+      <button type="button" class="btn-mini" onclick="limparFiltroEstoque()">Limpar busca</button>
+    </div>
+    <div id="infoEstoque" style="font-size:12px;color:#8B4A5A;margin:6px 0 10px;"></div>
+    <div id="estoqueLista" class="estoque-grid"></div>
+  </section>
+
+  <div id="mensagem" class="mensagem" style="display:none;"></div>
+</main>
+
+<script src="dados-snapshot.js"></script>
+<script src="script.js?v=45"></script>
+<script src="admin.js?v=26"></script>
+<script>
+const STATUS_OPTS = ['Solicitado','Reservado','Aguardando pagamento','Pago','Concluído/Entregue','Cancelado','Lista de espera'];
+
+// Visao geral
+document.addEventListener('DOMContentLoaded', function () {
+  setTimeout(function () {
+    var r = document.getElementById('resumo');
+    var dp = document.getElementById('dashProdutos');
+    var dc = document.getElementById('dashCategorias');
+    if (r && dp) { var m = r.textContent.match(/(\d+)/); if (m) dp.textContent = m[1]; }
+    if (dc) { fetch('api/categorias', { credentials: 'same-origin' }).then(function (x){return x.json();}).then(function (cs){ dc.textContent = cs.length; }).catch(function(){}); }
+  }, 600);
+});
+
+// Categorias
+async function carregarCategoriasAdmin() {
+  const box = document.getElementById('categoriasAdminLista');
+  if (!box) return;
+  try {
+    const rCats = await fetch('api/admin/categorias', { credentials: 'same-origin', cache: 'no-store' });
+    if (typeof erroAutenticacao === 'function' && erroAutenticacao(rCats)) return;
+    const cats = await rCats.json().catch(function () { return []; });
+    const rProd = await fetch('api/produtos', { credentials: 'same-origin', cache: 'no-store' });
+    const prods = await rProd.json().catch(function () { return []; });
+    if (!Array.isArray(cats) || !Array.isArray(prods)) {
+      box.innerHTML = '<p class="vazio">Não foi possível carregar. Clique em Atualizar.</p>';
+      return;
+    }
+    const countByCat = {};
+    for (const p of prods) { countByCat[p.categoria] = (countByCat[p.categoria] || 0) + 1; }
+    const principais = cats.filter(function (c) { return !c.parent_id; });
+    let html = '';
+    for (const main of principais) {
+      const filhas = cats.filter(function (c) { return c.parent_id === main.id; });
+      const totalMain = (countByCat[main.slug] || 0) + filhas.reduce(function (a, f) { return a + (countByCat[f.slug] || 0); }, 0);
+      html += '<div class="categoria-card" style="flex-direction:column;align-items:flex-start;">' +
+        '<div style="display:flex;justify-content:space-between;width:100%;align-items:center;">' +
+        '<div><div class="cat-nome">' + main.nome + '</div><div class="cat-count">' + totalMain + ' produto(s) (inclui subcategorias)</div></div>' +
+        '<button class="btn-mini perigo" onclick="arquivarCategoria(' + main.id + ')">Arquivar</button>' +
+        '</div>';
+      if (filhas.length) {
+        html += '<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;width:100%;">';
+        for (const f of filhas) {
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#FBEAEC;border-radius:8px;">' +
+            '<span style="font-size:13px;color:#49383D;">↳ ' + f.nome + ' <span style="color:#A65365;">(' + (countByCat[f.slug] || 0) + ')</span></span>' +
+            '<button class="btn-mini perigo" onclick="arquivarCategoria(' + f.id + ')">Arquivar</button>' +
+            '</div>';
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+    // categorias orfas
+    const orfas = cats.filter(function (c) { return c.parent_id && !principais.find(function (m) { return m.id === c.parent_id; }); });
+    for (const o of orfas) {
+      html += '<div class="categoria-card"><div><div class="cat-nome">' + o.nome + '</div><div class="cat-count">' + (countByCat[o.slug] || 0) + ' produto(s)</div></div>' +
+        '<button class="btn-mini perigo" onclick="arquivarCategoria(' + o.id + ')">Arquivar</button></div>';
+    }
+    box.innerHTML = html || '<p class="vazio">Nenhuma categoria cadastrada.</p>';
+    popularCategoriasPai(cats);
+  } catch (e) {
+    box.innerHTML = '<p class="vazio">Não foi possível carregar. Clique em Atualizar.</p>';
+  }
+}
+
+// Recupera sozinho se a lista ficar vazia (sessao renovada, aba em foco, etc.).
+function verificarCategoriasVazias() {
+  const box = document.getElementById('categoriasAdminLista');
+  const painel = document.getElementById('painel');
+  if (!box || !painel || getComputedStyle(painel).display === 'none') return;
+  if (!box.querySelector('.categoria-card')) carregarCategoriasAdmin();
+}
+window.addEventListener('focus', verificarCategoriasVazias);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) verificarCategoriasVazias(); });
+setInterval(verificarCategoriasVazias, 12000);
+
+async function adicionarCategoria(event) {
+  if (event) event.preventDefault();
+  const nome = (document.getElementById('novaCategoriaNome').value || '').trim();
+  const ordem = Number(document.getElementById('novaCategoriaOrdem').value || 0);
+  const pai = document.getElementById('novaCategoriaPai').value;
+  if (!nome) return;
+  try {
+    const r = await fetch('api/admin/categorias', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome, ordem: ordem, parent_id: pai ? Number(pai) : null }) });
+    const d = await r.json();
+    if (r.ok) {
+      document.getElementById('novaCategoriaNome').value = '';
+      document.getElementById('novaCategoriaPai').value = '';
+      carregarCategoriasAdmin();
+      popularCategoriasForm();
+    } else {
+      alert(d.erro || 'Falha ao adicionar categoria.');
+    }
+  } catch (e) { alert('Erro de conexao.'); }
+}
+async function arquivarCategoria(id) {
+  if (!confirm('Arquivar esta categoria?')) return;
+  try {
+    const r = await fetch('api/admin/categorias/' + id, { method: 'DELETE', credentials: 'same-origin' });
+    const d = await r.json();
+    if (r.ok) carregarCategoriasAdmin();
+    else alert(d.erro || 'Falha.');
+  } catch (e) { alert('Erro de conexao.'); }
+}
+function popularCategoriasPai(cats) {
+  const sel = document.getElementById('novaCategoriaPai');
+  if (!sel) return;
+  const atual = sel.value;
+  let html = '<option value="">Nenhuma (principal)</option>';
+  const principais = cats.filter(function (c) { return !c.parent_id && c.ativa; });
+  for (const main of principais) {
+    html += '<option value="' + main.id + '">' + main.nome + '</option>';
+  }
+  sel.innerHTML = html;
+  sel.value = atual;
+}
+
+async function popularCategoriasForm() {
+  try {
+    const r = await fetch('api/admin/categorias', { credentials: 'same-origin' });
+    if (r.status === 401 ? sessaoExpirada() : false) return;
+    const cats = await r.json();
+    const ativas = cats.filter(function(c){return c.ativa;});
+    const principais = ativas.filter(function(c){return !c.parent_id;});
+    const sel = document.getElementById('categoria');
+    const filtro = document.getElementById('filtroProdutoCategoria');
+    let opts = '';
+    for (const main of principais) {
+      const filhas = ativas.filter(function(c){return c.parent_id === main.id;});
+      if (filhas.length) {
+        opts += '<optgroup label="' + main.nome + '">';
+        opts += '<option value="' + main.slug + '">Todas de ' + main.nome + '</option>';
+        for (const f of filhas) opts += '<option value="' + f.slug + '">' + f.nome + '</option>';
+        opts += '</optgroup>';
+      } else {
+        opts += '<option value="' + main.slug + '">' + main.nome + '</option>';
+      }
+    }
+    if (sel) sel.innerHTML = opts;
+    if (filtro) {
+      const atual = filtro.value;
+      filtro.innerHTML = '<option value="">Todas as categorias</option>' + opts;
+      filtro.value = atual;
+    }
+  } catch (e) {}
+}
+
+// Filtro de produtos por categoria/nome
+function filtrarProdutosLista() {
+  const q = (document.getElementById('filtroProdutoQ') || {}).value || '';
+  const cat = (document.getElementById('filtroProdutoCategoria') || {}).value || '';
+  // delega para admin.js se existir funcao de render; caso contrario apenas anota
+  if (typeof window._renderProdutosFiltrados === 'function') window._renderProdutosFiltrados(q, cat);
+}
+
+// Estoque
+let ultimoEstoque = [];
+let codigosEstoque = {};
+function normalizarEstoque(v) { return String(v == null ? '' : v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+async function carregarEstoque() {
+  const box = document.getElementById('estoqueLista');
+  if (!box) return;
+  try {
+    const rEstoque = await fetch('api/admin/estoque', { credentials: 'same-origin', cache: 'no-store' });
+    if (rEstoque.status === 401 ? sessaoExpirada() : false) return;
+    const rows = await rEstoque.json().catch(function () { return []; });
+    const rProdutos = await fetch('api/admin/produtos', { credentials: 'same-origin', cache: 'no-store' });
+    if (rProdutos.status === 401 ? sessaoExpirada() : false) return;
+    const prods = await rProdutos.json().catch(function () { return []; });
+    if (!Array.isArray(rows) || !Array.isArray(prods)) {
+      box.innerHTML = '<p class="vazio">Não foi possível carregar. Clique em Atualizar.</p>';
+      return;
+    }
+    codigosEstoque = {};
+    for (const p of prods) codigosEstoque[p.id] = p.codigo;
+    ultimoEstoque = rows;
+    renderizarEstoque();
+    const totalDisp = rows.reduce(function (a, x){ return a + (x.disponivel || 0); }, 0);
+    const dash = document.getElementById('dashEstoque');
+    if (dash) dash.textContent = totalDisp;
+  } catch (e) { box.innerHTML = '<p class="vazio">Erro ao carregar estoque.</p>'; }
+}
+function limparFiltroEstoque() {
+  const f = document.getElementById('filtroEstoqueQ');
+  if (f) { f.value = ''; f.focus(); }
+  renderizarEstoque();
+}
+function renderizarEstoque() {
+  const box = document.getElementById('estoqueLista');
+  if (!box) return;
+  const q = normalizarEstoque((document.getElementById('filtroEstoqueQ') || {}).value || '');
+  const filtrados = ultimoEstoque.filter(function (x) {
+    if (!q) return true;
+    return normalizarEstoque(x.produto).includes(q)
+      || normalizarEstoque(codigosEstoque[x.product_id]).includes(q)
+      || normalizarEstoque(x.cor).includes(q);
+  });
+  const info = document.getElementById('infoEstoque');
+  if (info) info.textContent = 'Exibindo ' + filtrados.length + ' de ' + ultimoEstoque.length + ' variações' + (q ? ' (busca: ' + (document.getElementById('filtroEstoqueQ') || {}).value + ')' : '');
+  if (!filtrados.length) { box.innerHTML = '<p class="vazio">' + (ultimoEstoque.length ? 'Nenhum produto encontrado.' : 'Nenhuma variação cadastrada.') + '</p>'; return; }
+  box.innerHTML = filtrados.map(function (x) {
+    const codigo = codigosEstoque[x.product_id] || '';
+    return '<div class="estoque-item">' +
+      '<div><div class="prod-nome">' + x.produto + '</div><div class="prod-codigo">' + (codigo ? 'Código: ' + codigo : '') + '</div><div class="estoque-meta">' + x.cor + '</div></div>' +
+      '<div class="estoque-meta">Reservada: ' + x.reservada + '</div>' +
+      '<div><label style="font-size:12px;">Disponível</label><input type="number" min="0" value="' + x.disponivel + '" data-vid="' + x.variant_id + '"></div>' +
+      '<div class="estoque-meta">Variante #' + x.variant_id + '</div>' +
+      '<button class="btn-mini" onclick="salvarEstoque(this)">Salvar</button>' +
+      '</div>';
+  }).join('');
+}
+async function salvarEstoque(btn) {
+  if (!(await verificarSessaoAtiva())) return;
+  const input = btn.parentElement.querySelector('input[data-vid]');
+  const vid = input.getAttribute('data-vid');
+  const val = parseInt(input.value, 10);
+  if (!Number.isInteger(val) || val < 0) { alert('Informe uma quantidade válida.'); return; }
+  try {
+    const r = await fetch('api/admin/estoque/' + vid, { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ disponivel: val }) });
+    if (typeof erroAutenticacao === 'function' && erroAutenticacao(r)) return;
+    const d = await r.json().catch(function () { return {}; });
+    if (r.ok) {
+      btn.textContent = 'Salvo';
+      setTimeout(function(){ btn.textContent = 'Salvar'; }, 1200);
+      carregarEstoque();
+      // Avisa tambem as outras abas, mesmo se o canal SSE nao estiver ativo.
+      if (typeof window.atualizarAposEventoCatalogo === 'function') window.atualizarAposEventoCatalogo();
+    } else { alert(d.erro || 'Falha'); }
+  } catch (e) { alert('Erro de conexao'); }
+}
+
+function verificarEstoqueVazio() {
+  const box = document.getElementById('estoqueLista');
+  const painel = document.getElementById('painel');
+  if (!box || !painel || getComputedStyle(painel).display === 'none') return;
+  if (!box.querySelector('.estoque-item')) carregarEstoque();
+}
+window.addEventListener('focus', verificarEstoqueVazio);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) verificarEstoqueVazio(); });
+setInterval(verificarEstoqueVazio, 12000);
+
+// Pedidos admin
+async function carregarPedidosAdmin() {
+  const box = document.getElementById('pedidosAdminLista');
+  if (!box) return;
+  try {
+    const q = (document.getElementById('filtroPedidoQ') || {}).value || '';
+    const st = (document.getElementById('filtroPedidoStatus') || {}).value || '';
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (st) params.set('status', st);
+    const r = await fetch('api/admin/pedidos?' + params.toString(), { credentials: 'same-origin' });
+    if (typeof erroAutenticacao === 'function' && erroAutenticacao(r)) return;
+    if (!r.ok) { box.innerHTML = '<p class="vazio">Acesso negado ou erro.</p>'; return; }
+    const orders = await r.json();
+    const dashP = document.getElementById('dashPedidos');
+    const dashR = document.getElementById('dashReservas');
+    if (dashP) dashP.textContent = orders.length;
+    if (dashR) dashR.textContent = orders.filter(function(o){ return o.status === 'Reservado'; }).length;
+    if (!orders.length) { box.innerHTML = '<p class="vazio">Nenhum pedido encontrado.</p>'; return; }
+    box.innerHTML = orders.map(function (o) {
+      const itens = o.itens.map(function (i) {
+        const opts = STATUS_OPTS.map(function (st) { return '<option value="' + st + '"' + (i.status === st ? ' selected' : '') + '>' + st + '</option>'; }).join('');
+        return '<div class="item-pedido">' +
+          '<div><strong>' + i.produto + '</strong><br><span style="color:#A65365;font-size:13px;">' + (i.cor||'') + ' x' + i.quantidade + (i.observacao ? ' — ' + i.observacao : '') + '</span></div>' +
+          '<select data-oid="' + o.id + '" data-iid="' + i.id + '">' + opts + '</select>' +
+          '<button class="btn-mini" onclick="salvarStatusItem(this)">Salvar</button>' +
+          '</div>';
+      }).join('');
+      return '<div class="pedido-card">' +
+        '<div class="pedido-topo"><strong>' + o.codigo + '</strong><span class="pedido-meta">' + o.criado_em + '</span></div>' +
+        '<div style="font-size:13px;color:#49383D;line-height:1.6;margin-bottom:6px;"><strong>Cliente:</strong> ' + (o.cliente || '-') +
+          ' · <strong>Telefone:</strong> ' + (o.telefone || '-') + ' · <strong>E-mail:</strong> ' + (o.email || '-') + '</div>' +
+        (o.observacao_geral ? '<div style="font-size:13px;color:#A65365;font-weight:600;margin-bottom:6px;">' + o.observacao_geral + '</div>' : '') +
+        '<div class="pedido-status-geral">Status geral: <strong>' + o.status + '</strong> · Tipo: ' + o.tipo + ' · Origem: ' + o.origem + '</div>' +
+        itens +
+        '<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">' +
+          '<button class="btn-mini perigo" onclick="cancelarPedidoAdmin(' + o.id + ')">Cancelar pedido inteiro</button>' +
+          '<button class="btn-mini perigo" onclick="excluirPedidoAdmin(' + o.id + ', \'' + o.codigo + '\')">Excluir pedido</button>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+  } catch (e) { box.innerHTML = '<p class="vazio">Erro ao carregar pedidos.</p>'; }
+}
+async function salvarStatusItem(btn) {
+  const sel = btn.previousElementSibling;
+  const oid = sel.getAttribute('data-oid');
+  const iid = sel.getAttribute('data-iid');
+  const status = sel.value;
+  try {
+    const r = await fetch('api/admin/pedidos/' + oid + '/itens/' + iid + '/status', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status }) });
+    if (typeof erroAutenticacao === 'function' && erroAutenticacao(r)) return;
+    const d = await r.json().catch(function () { return {}; });
+    if (r.ok) { btn.textContent = 'Salvo'; setTimeout(function(){ btn.textContent = 'Salvar'; }, 1200); carregarPedidosAdmin(); }
+    else { alert(d.erro || 'Falha'); }
+  } catch (e) { alert('Erro de conexao'); }
+}
+async function excluirPedidoAdmin(id, codigo) {
+  if (!confirm('Excluir o pedido ' + (codigo || '') + '? essa acao nao pode ser desfeita.')) return;
+  try {
+    const r = await fetch('api/admin/pedidos/' + id, { method: 'DELETE', credentials: 'same-origin' });
+    if (typeof erroAutenticacao === 'function' && erroAutenticacao(r)) return;
+    const d = await r.json().catch(function () { return {}; });
+    if (r.ok) { carregarPedidosAdmin(); carregarEstoque(); }
+    else alert(d.erro || 'Falha ao excluir.');
+  } catch (e) { alert('Erro de conexao'); }
+}
+async function cancelarPedidoAdmin(id) {
+  if (!confirm('Cancelar o pedido inteiro e devolver estoque?')) return;
+  try {
+    const r = await fetch('api/admin/pedidos/' + id + '/cancelar', { method: 'POST', credentials: 'same-origin' });
+    if (typeof erroAutenticacao === 'function' && erroAutenticacao(r)) return;
+    const d = await r.json().catch(function () { return {}; });
+    if (r.ok) { carregarPedidosAdmin(); carregarEstoque(); }
+    else { alert(d.erro || 'Falha'); }
+  } catch (e) { alert('Erro de conexao'); }
+}
+
+// Cupons admin
+async function carregarCuponsAdmin() {
+  const box = document.getElementById('cuponsLista');
+  if (!box) return;
+  try {
+    const r = await fetch('api/admin/cupons', { credentials: 'same-origin' });
+    if (typeof erroAutenticacao === 'function' && erroAutenticacao(r)) return;
+    if (!r.ok) { box.innerHTML = '<p class="vazio">Acesso negado ou erro.</p>'; return; }
+    const rows = await r.json();
+    if (!rows.length) { box.innerHTML = '<p class="vazio">Nenhum cupom cadastrado.</p>'; return; }
+    box.innerHTML = rows.map(function (c) {
+      return '<div class="item-simples" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">' +
+        '<div><strong>' + c.nome + '</strong><br><span style="color:#A65365;">Código: ' + c.codigo +
+        ' · R$' + Number(c.valor).toFixed(2).replace('.', ',') + (c.validade ? ' · Válido até ' + c.validade : '') + '</span></div>' +
+        '<button class="btn-mini perigo" onclick="excluirCupom(' + c.id + ')">Excluir</button>' +
+        '</div>';
+    }).join('');
+  } catch (e) { box.innerHTML = '<p class="vazio">Erro ao carregar cupons.</p>'; }
+}
+async function adicionarCupom(event) {
+  if (event) event.preventDefault();
+  const msg = document.getElementById('msgCupom');
+  const corpo = {
+    nome: (document.getElementById('cupomNome').value || '').trim(),
+    codigo: (document.getElementById('cupomCodigo').value || '').trim(),
+    valor: (document.getElementById('cupomValor').value || '').trim(),
+    validade: (document.getElementById('cupomValidade').value || '').trim()
+  };
+  try {
+    const r = await fetch('api/admin/cupons', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(corpo)
+    });
+    if (typeof erroAutenticacao === 'function' && erroAutenticacao(r)) return;
+    const d = await r.json().catch(function () { return {}; });
+    if (msg) {
+      msg.style.display = 'block';
+      msg.textContent = r.ok ? 'Cupom adicionado!' : (d.erro || 'Falha ao adicionar.');
+      msg.className = 'mensagem' + (r.ok ? '' : ' erro');
+    }
+    if (r.ok) { document.getElementById('formCupom').reset(); carregarCuponsAdmin(); }
+  } catch (e) {
+    if (msg) { msg.style.display = 'block'; msg.textContent = 'Erro de conexao'; msg.className = 'mensagem erro'; }
+  }
+}
+async function excluirCupom(id) {
+  if (!confirm('Excluir este cupom?')) return;
+  try {
+    const r = await fetch('api/admin/cupons/' + id, { method: 'DELETE', credentials: 'same-origin' });
+    if (typeof erroAutenticacao === 'function' && erroAutenticacao(r)) return;
+    if (r.ok) carregarCuponsAdmin(); else alert('Falha ao excluir.');
+  } catch (e) { alert('Erro de conexao'); }
+}
+
+async function carregarWaitlistAdmin() {
+  const box = document.getElementById('waitlistAdminLista');
+  if (!box) return;
+  try {
+    const r = await fetch('api/admin/waitlist', { credentials: 'same-origin' });
+    if (typeof erroAutenticacao === 'function' && erroAutenticacao(r)) return;
+    if (!r.ok) { box.innerHTML = '<p class="vazio">Acesso negado ou erro.</p>'; return; }
+    const rows = await r.json();
+    if (!rows.length) { box.innerHTML = '<p class="vazio">Nenhuma solicitação.</p>'; return; }
+    box.innerHTML = rows.map(function (x) {
+      const badge = x.status === 'aguardando' ? 'Aguardando' : x.status;
+      return '<div class="item-simples">' +
+        '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">' +
+        '<div><strong>' + x.produto + '</strong><br><span style="color:#A65365;">' + x.cor + ' x' + x.quantidade + '</span>' +
+          '<div style="font-size:12px;color:#49383D;line-height:1.6;margin-top:4px;"><strong>Cliente:</strong> ' + (x.cliente || '-') +
+          ' · <strong>Telefone:</strong> ' + (x.telefone || '-') + ' · <strong>E-mail:</strong> ' + (x.email || '-') + '</div></div>' +
+        '<div>' + badge + '</div>' +
+        '</div>' +
+        (x.status === 'aguardando'
+          ? '<div style="display:flex;gap:6px;margin-top:8px;"><button class="btn-mini" onclick="aprovarWaitlist(' + x.id + ')">Aprovar</button><button class="btn-mini perigo" onclick="cancelarWaitlist(' + x.id + ')">Recusar</button></div>'
+          : '<div style="font-size:12px;color:#8B4A5A;margin-top:8px;">Processada</div>') +
+        '</div>';
+    }).join('');
+  } catch (e) { box.innerHTML = '<p class="vazio">Erro ao carregar.</p>'; }
+}
+async function aprovarWaitlist(id) {
+  try {
+    const r = await fetch('api/admin/waitlist/' + id, { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'aprovada' }) });
+    if (typeof erroAutenticacao === 'function' && erroAutenticacao(r)) return;
+    const d = await r.json().catch(function () { return {}; });
+    if (r.ok) { carregarWaitlistAdmin(); carregarEstoque(); }
+    else { alert(d.erro || 'Falha (verifique estoque)'); }
+  } catch (e) { alert('Erro de conexao'); }
+}
+async function cancelarWaitlist(id) {
+  if (!confirm('Recusar esta solicitação?')) return;
+  try {
+    const r = await fetch('api/admin/waitlist/' + id, { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'cancelada' }) });
+    if (typeof erroAutenticacao === 'function' && erroAutenticacao(r)) return;
+    const d = await r.json().catch(function () { return {}; });
+    if (r.ok) carregarWaitlistAdmin();
+    else alert(d.erro || 'Falha');
+  } catch (e) { alert('Erro de conexao'); }
+}
+
+// Registro manual de pedidos
+async function carregarProdutosLive() {
+  try {
+    const r = await fetch('api/produtos', { credentials: 'same-origin' });
+    const arr = await r.json();
+    const sel = document.getElementById('liveProduto');
+    if (!sel) return;
+    sel.innerHTML = arr.map(function (p) { return '<option value="' + p.id + '">' + p.nome + ' (Código: ' + (p.codigo||'') + ')</option>'; }).join('');
+    await atualizarVariacoesLive();
+  } catch (e) {}
+}
+async function atualizarVariacoesLive() {
+  const pid = document.getElementById('liveProduto').value;
+  try {
+    const r = await fetch('api/produtos', { credentials: 'same-origin' });
+    const arr = await r.json();
+    const p = arr.find(function (x) { return String(x.id) === String(pid); });
+    const sel = document.getElementById('liveVariacao');
+    if (!p || !sel) return;
+    sel.innerHTML = (p.variacoes || []).map(function (v) { return '<option value="' + v.id + '">' + v.cor + '</option>'; }).join('');
+  } catch (e) {}
+}
+async function registrarLive(event) {
+  if (event) event.preventDefault();
+  const msg = document.getElementById('msgLive');
+  const body = {
+    cliente_nome: document.getElementById('liveCliente').value.trim(),
+    telefone_cliente: document.getElementById('liveTelefone').value.trim(),
+    product_id: Number(document.getElementById('liveProduto').value),
+    variant_id: Number(document.getElementById('liveVariacao').value),
+    quantidade: Number(document.getElementById('liveQtd').value),
+    status: document.getElementById('liveStatus').value,
+    observacao: document.getElementById('liveObs').value.trim()
+  };
+  try {
+    const r = await fetch('api/admin/lives', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (r.ok) {
+      if (msg) { msg.textContent = 'Registrado: ' + d.codigo; msg.className = 'mensagem ok'; msg.style.display = 'block'; }
+      document.getElementById('formLive').reset();
+      carregarLives();
+    } else {
+      if (msg) { msg.textContent = d.erro || 'Falha'; msg.className = 'mensagem erro'; msg.style.display = 'block'; }
+    }
+  } catch (e) { if (msg) { msg.textContent = 'Erro de conexao'; msg.className = 'mensagem erro'; msg.style.display = 'block'; } }
+}
+async function carregarLives() {
+  const box = document.getElementById('livesLista');
+  if (!box) return;
+  try {
+    const r = await fetch('api/admin/lives', { credentials: 'same-origin' });
+    if (!r.ok) { box.innerHTML = '<p class="vazio">Acesso negado ou erro.</p>'; return; }
+    const rows = await r.json();
+    if (!rows.length) { box.innerHTML = '<p class="vazio">Nenhum pedido registrado manualmente.</p>'; return; }
+    box.innerHTML = rows.map(function (o) {
+      const itens = o.itens.map(function (i) { return i.produto + ' (Código ' + i.codigo + ') — ' + (i.cor||'') + ' x' + i.quantidade + ' [' + i.status + ']'; }).join('<br>');
+      return '<div class="item-simples">' +
+        '<strong>' + o.codigo + '</strong> · ' + o.cliente + (o.telefone ? ' · ' + o.telefone : '') +
+        '<br><span style="color:#A65365;">' + o.criado_em + ' · ' + o.status + '</span>' +
+        '<div style="margin-top:6px;">' + itens + '</div>' +
+        (o.observacao_geral ? '<div style="margin-top:6px;font-size:13px;">Observação: ' + o.observacao_geral + '</div>' : '') +
+        '</div>';
+    }).join('');
+  } catch (e) { box.innerHTML = '<p class="vazio">Erro ao carregar.</p>'; }
+}
+
+// Filtro de produtos (nome/codigo/categoria)
+document.addEventListener('DOMContentLoaded', function () {
+  const inputQ = document.getElementById('filtroProdutoQ');
+  const inputCat = document.getElementById('filtroProdutoCategoria');
+  function aplicarFiltro() {
+    if (typeof listaProdutos === 'undefined' || !Array.isArray(listaProdutos)) return;
+    const q = ((inputQ && inputQ.value) || '').toLowerCase();
+    const cat = (inputCat && inputCat.value) || '';
+    const filtrados = listaProdutos.filter(function (p) {
+      const okQ = !q || (p.nome||'').toLowerCase().includes(q) || (p.codigo||'').toLowerCase().includes(q);
+      const okCat = !cat || p.categoria === cat;
+      return okQ && okCat;
+    });
+    // render via admin.js helper if available
+    if (typeof renderizarListaFiltrada === 'function') renderizarListaFiltrada(filtrados);
+  }
+  if (inputQ) inputQ.addEventListener('input', aplicarFiltro);
+  if (inputCat) inputCat.addEventListener('change', aplicarFiltro);
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+  setTimeout(function () {
+    carregarCategoriasAdmin();
+    popularCategoriasForm();
+    const filtroEstoque = document.getElementById('filtroEstoqueQ');
+    if (filtroEstoque) filtroEstoque.value = '';
+    carregarEstoque();
+    if (filtroEstoque) filtroEstoque.addEventListener('input', function () { if (typeof renderizarEstoque === 'function') renderizarEstoque(); });
+    carregarPedidosAdmin();
+    carregarWaitlistAdmin();
+    carregarCuponsAdmin();
+    carregarProdutosLive();
+    carregarLives();
+    const sel = document.getElementById('liveProduto');
+    if (sel) sel.addEventListener('change', atualizarVariacoesLive);
+  }, 900);
+});
+</script>
+</body>
+</html>

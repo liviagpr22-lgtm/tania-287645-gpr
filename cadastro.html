@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Cadastro | Tania Briet Acessorios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=16">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="logo" aria-label="Tania Briet Acessorios — Início">
+      <span class="logo-icon" aria-hidden="true">&#9829;</span>
+      <div class="logo-text">
+        <h1>Tania Briet</h1>
+        <span>Acessórios</span>
+      </div>
+    </a>
+    <nav class="main-nav" aria-label="Menu principal">
+      <a href="index.html" class="nav-link">Início</a>
+      <a href="categorias.html" class="nav-link">Categorias</a>
+      <a href="novidades.html" class="nav-link">Novidades</a>
+      <a href="contato.html" class="nav-link">Contato</a>
+    </nav>
+    <div class="header-actions">
+      <a href="#carrinho" class="icon-btn cart-btn" onclick="abrirCarrinho()" aria-label="Carrinho" title="Carrinho">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A65365" stroke-width="2" stroke-linecap="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span class="cart-count" id="cartCount">0</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main>
+<section class="page-intro">
+  <p class="page-eyebrow">Área da cliente</p>
+  <h2>Cadastro</h2>
+  <p>Crie sua conta para acompanhar pedidos e reservas.</p>
+</section>
+
+<div style="max-width:460px;margin:0 auto;padding:0 20px 72px;">
+  <form id="formCadastro" onsubmit="cadastrarCliente(event); return false;" style="background:#FFFCFA;padding:32px;border-radius:24px;box-shadow:0 10px 30px rgba(166,83,101,0.1);">
+    <label for="cadNome">Nome completo</label>
+    <input type="text" id="cadNome" required style="width:100%;padding:12px 14px;border:1px solid rgba(166,83,101,0.25);border-radius:12px;font-size:15px;margin-bottom:18px;box-sizing:border-box;">
+    <label for="cadTelefone">Telefone</label>
+    <input type="tel" id="cadTelefone" required style="width:100%;padding:12px 14px;border:1px solid rgba(166,83,101,0.25);border-radius:12px;font-size:15px;margin-bottom:18px;box-sizing:border-box;">
+    <label for="cadEmail">E-mail</label>
+    <input type="email" id="cadEmail" required style="width:100%;padding:12px 14px;border:1px solid rgba(166,83,101,0.25);border-radius:12px;font-size:15px;margin-bottom:18px;box-sizing:border-box;">
+    <label for="cadSenha">Senha (mín. 6 caracteres)</label>
+    <input type="password" id="cadSenha" required style="width:100%;padding:12px 14px;border:1px solid rgba(166,83,101,0.25);border-radius:12px;font-size:15px;margin-bottom:18px;box-sizing:border-box;">
+    <button type="submit" class="btn-principal" style="margin-bottom:10px;">Criar conta</button>
+    <p id="msgCadastro" class="mensagem" style="display:none;position:static;transform:none;"></p>
+  </form>
+  <p style="text-align:center;margin-top:16px;font-size:14px;">Já tem conta? <a href="login.html" style="color:#A65365;font-weight:600;">Entrar</a></p>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="index.html" class="logo" aria-label="Tania Briet Acessorios — Início">
+        <span class="logo-icon" aria-hidden="true">&#9829;</span>
+        <div class="logo-text"><h1>Tania Briet</h1><span>Acessórios</span></div>
+      </a>
+    </div>
+    <nav class="footer-nav" aria-label="Links institucionais">
+      <a href="index.html">Início</a>
+      <a href="categorias.html">Categorias</a>
+      <a href="novidades.html">Novidades</a>
+      <a href="contato.html">Contato</a>
+    </nav>
+  </div>
+  <div class="footer-bottom"><p>Tania Briet © Todos os direitos reservados.</p></div>
+</footer>
+
+<section id="carrinho" class="carrinho-panel" aria-label="Carrinho de compras" hidden>
+  <div class="carrinho-inner">
+    <div class="carrinho-header"><h2>Meu Carrinho</h2><button onclick="fecharCarrinho()" class="btn-close" aria-label="Fechar">&#10005;</button></div>
+    <div id="carrinhoLista"></div>
+    <div class="carrinho-resumo">
+      <div class="linha"><span>Subtotal</span><span id="subtotal">R$0,00</span></div>
+      <div class="linha total"><span>Total</span><span id="total">R$0,00</span></div>
+      <a href="#" class="btn-whatsapp" onclick="abrirModalPedido(); return false;">Enviar pedido no WhatsApp</a>
+      <a href="#" class="btn-continue" onclick="fecharCarrinho(); return false;">Continuar comprando</a>
+    </div>
+  </div>
+</section>
+
+<script src="dados-snapshot.js"></script>
+<script src="script.js?v=45"></script>
+</body>
+</html>

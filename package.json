@@ -1,0 +1,25 @@
+{
+  "name": "tania-briet-acessorios",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Catalogo digital Tania Briet Acessorios",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "seed": "node server/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0",
+    "multer": "^2.5.0",
+    "zod": "^4.0.0",
+    "@netlify/blobs": "^11.1.11",
+    "serverless-http": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+public/
+netlify/functions/db-inicial.js
+data/tania.db
+data/tania.db-shm
+data/tania.db-wal
+data/tania-inicial.db-shm
+data/tania-inicial.db-wal
+.env
