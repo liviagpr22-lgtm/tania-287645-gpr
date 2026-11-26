@@ -1,10 +1,6 @@
-const fs = require('fs');
-const path = require('path');
 const bcrypt = require('bcryptjs');
 const { db, transaction } = require('./db');
-
-const PROJECT_DIR = path.join(__dirname, '..');
-const PRODUTOS_JSON = path.join(PROJECT_DIR, 'produtos.json');
+const PRODUTOS = require('./produtos-iniciais');
 
 const DESTAQUES = new Set([1, 2, 3, 7, 14, 77, 9, 12]);
 const NOVIDADES = new Set([77, 1, 2, 7, 14]);
@@ -43,7 +39,7 @@ function run() {
     return;
   }
 
-  const raw = JSON.parse(fs.readFileSync(PRODUTOS_JSON, 'utf8'));
+  const raw = PRODUTOS;
   if (!Array.isArray(raw) || !raw.length) throw new Error('produtos.json invalido');
 
   transaction((db) => {

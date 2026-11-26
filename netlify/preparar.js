@@ -25,4 +25,10 @@ if (fs.existsSync(imagens)) fs.cpSync(imagens, path.join(PUBLIC, 'Produtos_image
 if (!fs.existsSync(BANCO_INICIAL)) throw new Error('data/tania-inicial.db nao encontrado');
 const base64 = fs.readFileSync(BANCO_INICIAL).toString('base64');
 fs.writeFileSync(ARQUIVO_DB, 'module.exports = ' + JSON.stringify(base64) + ';\n', 'utf8');
+
+// Mantem os modulos usados pela Function sempre sincronizados com as fontes.
+const schema = fs.readFileSync(path.join(RAIZ, 'server', 'schema.sql'), 'utf8');
+fs.writeFileSync(path.join(RAIZ, 'server', 'schema.js'), 'module.exports = ' + JSON.stringify(schema) + ';\n', 'utf8');
+const produtos = JSON.parse(fs.readFileSync(path.join(RAIZ, 'produtos.json'), 'utf8'));
+fs.writeFileSync(path.join(RAIZ, 'server', 'produtos-iniciais.js'), 'module.exports = ' + JSON.stringify(produtos) + ';\n', 'utf8');
 console.log('Publico preparado: ' + arquivos.length + ' arquivos, banco ' + Math.round(base64.length / 1024) + ' KB.');
