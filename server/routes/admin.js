@@ -7,8 +7,9 @@ const { requireAdmin } = require('../middleware/auth');
 const { notificarCatalogo } = require('../eventos');
 
 const router = express.Router();
+const usaBlobs = process.env.TANIA_SERVERLESS === '1';
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'Produtos_imagens', 'uploads');
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+if (!usaBlobs && !fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
@@ -17,7 +18,6 @@ const storage = multer.diskStorage({
     cb(null, 'upload_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + ext);
   }
 });
-const usaBlobs = process.env.TANIA_SERVERLESS === '1';
 const upload = multer({
   storage: usaBlobs ? multer.memoryStorage() : storage,
   limits: { fileSize: 5 * 1024 * 1024 },
