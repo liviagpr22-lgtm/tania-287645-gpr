@@ -943,3 +943,81 @@ body {
   height: 20px;
   display: block;
 }
+
+/* ===== Proporcoes mobile v3 ===== */
+@media (max-width: 640px) {
+  .header-inner { padding: 8px 12px; }
+  .logo-text h1 { font-size: 26px; line-height: 1; }
+  .logo-text span { font-size: 9px; letter-spacing: 1.5px; }
+
+  .hero-inner { padding: 22px 12px 26px; gap: 16px; }
+  .hero-title, .page-intro h2 { font-size: 36px; line-height: 1.08; }
+  .hero-desc, .page-intro p { font-size: 14px; line-height: 1.55; }
+  .hero-image img {
+    width: 100%; height: auto !important; max-height: none !important;
+    aspect-ratio: 5 / 4; object-fit: cover; border-radius: 16px;
+  }
+
+  .section-title { font-size: 28px; margin-bottom: 18px; }
+  .section-title::before, .section-title::after { width: 18px; margin: 0 6px; }
+
+  .categories { padding: 32px 12px; }
+  .categories-grid { gap: 10px; }
+  .cat-card { padding: 12px 8px; border-radius: 16px; }
+  .cat-icon { width: 96px; height: 96px; margin-bottom: 10px; border-radius: 14px; }
+  .cat-card h3 {
+    font-size: 13px; line-height: 1.3; min-height: 34px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .produtos-destaque { padding: 32px 12px; }
+  .section-header { margin-bottom: 14px; }
+  .produtos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .card-produto { border-radius: 14px; }
+  .card-media img, .card-produto img {
+    aspect-ratio: 4 / 5 !important; height: auto !important; object-fit: cover;
+  }
+  .card-produto .card-body { padding: 10px 10px 48px; }
+  .card-produto h3 {
+    font-size: 13px; line-height: 1.3; min-height: 34px; margin-bottom: 6px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card-produto .preco { font-size: 16px; padding-right: 36px; margin-bottom: 10px; }
+  .card-produto .card-body > div[style*="font-size:11px"] { font-size: 10px !important; }
+  .card-produto .card-body > div[style*="font-size:12px"] { font-size: 11px !important; margin-bottom: 6px !important; }
+  .card-produto .btn-carrinho { width: 34px; height: 34px; bottom: 8px; right: 8px; }
+  .card-produto .btn-carrinho svg { width: 18px; height: 18px; }
+  .card-produto button[onclick*="solicitarEspera"] {
+    bottom: 8px; left: 10px; right: 10px; width: auto;
+    padding: 8px 10px !important; font-size: 11px !important;
+  }
+
+  .beneficios-inner, .beneficios { padding: 26px 12px; gap: 12px; }
+  .beneficio-icone { width: 40px; height: 40px; margin-bottom: 8px; }
+  .beneficio h3 { font-size: 12px; }
+  .beneficio p { font-size: 11px; }
+
+  .page-intro { padding: 32px 12px 24px; }
+  .contato-grid { padding: 0 12px 32px; }
+
+  .carrinho-inner { padding: 18px 14px; }
+  .carrinho-item img { width: 64px; height: 64px; }
+  .busca-inner { width: calc(100% - 16px); padding: 18px 14px; }
+  .resultado-busca img { width: 56px; height: 56px; }
+
+  #detalhe-panel img#imgDetalhe {
+    height: auto !important; max-height: 320px;
+    aspect-ratio: 4 / 5; object-fit: cover; border-radius: 14px;
+  }
+  .variacao-opcao { min-width: 96px; max-width: 120px; }
+  .variacao-opcao img { height: 64px; }
+}
+
+@media (max-width: 360px) {
+  .hero-title, .page-intro h2 { font-size: 32px; }
+  .cat-icon { width: 88px; height: 88px; }
+  .produtos-grid { grid-template-columns: 1fr; }
+  .card-media img, .card-produto img { aspect-ratio: 4 / 3 !important; }
+  .card-produto h3 { min-height: 0; }
+  .beneficios-inner, .beneficios { grid-template-columns: 1fr !important; }
+}
