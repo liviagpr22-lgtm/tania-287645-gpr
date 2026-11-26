@@ -272,8 +272,8 @@
 </main>
 
 <script src="dados-snapshot.js"></script>
-<script src="script.js?v=45"></script>
-<script src="admin.js?v=26"></script>
+<script src="script.js?v=46"></script>
+<script src="admin.js?v=27"></script>
 <script>
 const STATUS_OPTS = ['Solicitado','Reservado','Aguardando pagamento','Pago','Concluído/Entregue','Cancelado','Lista de espera'];
 
@@ -779,7 +779,8 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-  setTimeout(function () {
+  setTimeout(async function () {
+    if (typeof verificarAdmin === 'function' && !(await verificarAdmin())) return;
     carregarCategoriasAdmin();
     popularCategoriasForm();
     const filtroEstoque = document.getElementById('filtroEstoqueQ');

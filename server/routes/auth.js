@@ -71,7 +71,7 @@ router.post('/api/auth/logout', (req, res) => {
 
 router.get('/api/auth/me', (req, res) => {
   const user = auth.getSessionUser(req);
-  if (!user) return res.status(401).json({ erro: 'Nao autenticado' });
+  if (!user) return res.json({ usuario: null });
   res.json({ usuario: user });
 });
 

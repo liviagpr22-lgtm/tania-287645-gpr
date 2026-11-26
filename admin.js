@@ -55,7 +55,8 @@ function erroAutenticacao(r) {
 async function verificarSessaoAtiva() {
   try {
     const r = await fetch('api/auth/me', { credentials: 'same-origin', cache: 'no-store' });
-    if (r.status === 401) { sessaoExpirada(); return false; }
+    const d = await r.json().catch(function () { return {}; });
+    if (!r.ok || !d.usuario) { sessaoExpirada(); return false; }
   } catch (e) { /* sem conexao: deixa a acao tentar normalmente */ }
   return true;
 }
