@@ -1,4 +1,4 @@
-const VERSAO_SCRIPT_ATUAL = 45;
+const VERSAO_SCRIPT_ATUAL = 48;
 
 // Abertura pelo arquivo (file://) nao consegue chamar a API. Avisa e usa o atalho.
 if (!/^https?:$/.test(location.protocol)) {
@@ -35,6 +35,19 @@ function esc(v) { return String(v == null ? '' : v).replace(/&/g,'&amp;').replac
 function estoqueDisponivel(p) {
   const v = Number(p && p.estoque);
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+}
+
+// Estoque é sempre por variação: cada cor/modelo tem sua própria quantidade.
+function variacaoEstoque(v) {
+  if (!v) return 0;
+  const bruta = v.estoque !== undefined ? v.estoque : v.disponivel;
+  const qtd = Number(bruta);
+  return Number.isFinite(qtd) && qtd > 0 ? Math.floor(qtd) : 0;
+}
+function statusEstoqueHtml(qtd) {
+  return qtd > 0
+    ? '<span class="status-variacao disponivel">Disponível: ' + qtd + '</span>'
+    : '<span class="status-variacao esgotado">ESGOTADO</span>';
 }
 // Configuração
 const WHATSAPP_NUMERO = '+5512981883097';
@@ -162,7 +175,10 @@ async function adicionarCarrinhoRapido(id) {
   const usuario = await obterUsuarioAtual();
   if (!usuario) { abrirAuth('carrinho', { id: id, variacao: null }); return; }
   const p = produtos.find(x => x.id === id);
-  if (p) adicionarCarrinho(p.id, p.variacoes && p.variacoes.length ? p.variacoes[0] : null);
+  if (!p) return;
+  const v = (p.variacoes || []).find(function (x) { return variacaoEstoque(x) > 0; }) ||
+            (p.variacoes && p.variacoes[0]) || null;
+  adicionarCarrinho(p.id, v);
 }
 
 async function abrirDetalhe(id) {
@@ -170,35 +186,47 @@ async function abrirDetalhe(id) {
   if (!usuario) { abrirAuth('detalhe', { id: id }); return; }
   const p = produtos.find(x => x.id === id);
   if (!p) return;
-  const v0 = window.variacaoAtual ? window.variacaoAtual : (p.variacoes ? p.variacoes[0] : null);
-  const est = (v0 && typeof v0.estoque === 'number') ? estoqueDisponivel(v0) : (typeof p.estoque === 'number' ? estoqueDisponivel(p) : Infinity);
-  // Abre um painel simples de detalhes com variações
+  const vars = Array.isArray(p.variacoes) && p.variacoes.length
+    ? p.variacoes
+    : [{ cor: 'Modelo único', imagem: p.imagem, estoque: estoqueDisponivel(p) }];
+  const anterior = window.variacaoAtual;
+  let vInicial = vars.find(function (v) { return anterior && v.id === anterior.id; }) ||
+                 vars.find(function (v) { return variacaoEstoque(v) > 0; }) || vars[0];
+  window.variacaoAtual = vInicial;
+  const qtdInicial = variacaoEstoque(vInicial);
+  const htmlVariacoes = vars.map(function (v, i) {
+    const qtd = variacaoEstoque(v);
+    const nome = String(v.cor || 'Modelo único');
+    const selecionada = v === vInicial ? ' selecionada' : '';
+    return '<button type="button" class="variacao-opcao' + selecionada + (qtd > 0 ? '' : ' esgotada') + '" ' +
+      'onclick="selecionarVariacao(' + p.id + ', ' + i + ', this)" aria-label="' + nome.replace(/"/g, '&quot;') + '">' +
+      '<img src="' + (v.imagem || p.imagem) + '" alt="' + nome.replace(/"/g, '&quot;') + '" loading="lazy">' +
+      '<span class="variacao-nome">' + nome + '</span>' +
+      statusEstoqueHtml(qtd) +
+      '</button>';
+  }).join('');
   const painelEl = document.createElement('section');
   painelEl.id = 'detalhe-panel';
-  painelEl.setAttribute('aria-label','Detalhes do produto');
+  painelEl.setAttribute('aria-label', 'Detalhes do produto');
   painelEl.style.cssText = 'position:fixed;inset:0;background:rgba(73,56,61,0.35);z-index:250;display:flex;align-items:center;justify-content:center;';
-  const htmlVariacoes = p.variacoes ? p.variacoes.map(v => {
-    const selecionado = v === p.variacoes[0] ? ' selecionada' : '';
-    return `<button onclick="selecionarVariacao(${p.id}, '${v.cor.replace(/'/g,"\\'")}')" style="border:2px solid ${v === p.variacoes[0] ? '#A65365' : 'transparent'}; border-radius:8px; padding:4px; background:#fff; margin:4px; cursor:pointer;" aria-label="${v.cor}">
-      <img src="${v.imagem}" alt="${v.cor}" style="width:70px;height:70px;object-fit:cover;border-radius:6px;">
-      <div style="font-size:12px;margin-top:4px;color:#49383D;">${v.cor}</div>
-    </button>`;
-  }).join('') : '';
-  painelEl.innerHTML = `<div style="background:#FFFCFA;width:92%;max-width:600px;padding:28px;border-radius:24px;box-shadow:0 20px 60px rgba(166,83,101,0.2);position:relative;max-height:85vh;overflow-y:auto;">
-    <button onclick="fecharDetalhe()" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:22px;color:#49383D;cursor:pointer;" aria-label="Fechar">&#10005;</button>
+  painelEl.innerHTML = `<div class="detalhe-inner">
+    <button onclick="fecharDetalhe()" class="detalhe-fechar" aria-label="Fechar">&#10005;</button>
     <div class="detalhe-grid">
-      <img id="imgDetalhe" src="${p.imagem}" alt="${p.nome}" style="width:100%;border-radius:16px;object-fit:cover;height:340px;box-shadow:0 12px 30px rgba(166,83,101,0.1);">
+      <img id="imgDetalhe" src="${vInicial.imagem || p.imagem}" alt="${p.nome}" loading="lazy">
       <div>
-         <h2 style="font-family:'Montserrat',sans-serif;font-size:24px;color:#49383D;margin-bottom:10px;">${p.nome}</h2>
-         ${p.codigo ? '<div style="font-size:13px;color:#A65365;font-weight:600;margin-bottom:6px;">Código: ' + p.codigo + '</div>' : ''}
-         ${p.categoria ? '<div style="font-size:13px;color:#49383D;opacity:0.8;margin-bottom:10px;">Categoria: ' + nomeCategoria(p.categoria) + '</div>' : ''}
-         <p style="font-size:17px;font-weight:500;color:#49383D;opacity:1;margin-bottom:20px;line-height:1.6;"><strong>Descrição:</strong> ${p.descricao || 'Sem descrição.'}</p>
-         ${estoqueDisponivel(p)<=0 ? '<p style="font-size:14px;color:#8B3A4A;font-weight:600;margin-bottom:12px;">ESGOTADO — Este produto está esgotado no momento. Gostaria de solicitar este produto para quando houver reposição?</p>' : '<p style="font-size:13px;color:#2a7a3a;margin-bottom:12px;">Disponível: ' + estoqueDisponivel(p) + '</p>'}
-         <p style="font-size:16px;color:#A65365;font-weight:700;margin-bottom:10px;">R$${p.preco.toFixed(2).replace('.',',')}</p>
-        ${p.variacoes && p.variacoes.length > 1 ? `<div><strong style="font-size:13px;color:#49383D;display:block;margin-bottom:8px;">Cor / Modelo</strong><div style="display:flex;flex-wrap:wrap;">${htmlVariacoes}</div></div>` : `<p style="font-size:13px;color:#A65365;margin:8px 0;">Disponível: ${p.variacoes ? p.variacoes[0].cor : 'Modelo único'}</p>`}
-        <div style="margin-top:16px;display:flex;align-items:center;gap:12px;">
-          ${estoqueDisponivel(p)>0 ? '<button onclick="adicionarCarrinho(' + p.id + ', null)" style="background:linear-gradient(135deg,#D78B98,#A65365);color:#fff;border:none;padding:12px 24px;border-radius:50px;font-weight:600;cursor:pointer;box-shadow:0 6px 18px rgba(166,83,101,0.25);">Adicionar ao carrinho</button>' : '<button onclick="solicitarEspera(' + p.id + ')" style="background:linear-gradient(135deg,#C99A46,#A65365);color:#fff;border:none;padding:12px 24px;border-radius:50px;font-weight:600;cursor:pointer;box-shadow:0 6px 18px rgba(166,83,101,0.25);">Solicitar (lista de espera)</button>'}
-          <span id="msgVariacao" style="font-size:13px;color:#49383D;"></span>
+        <h2>${p.nome}</h2>
+        ${p.codigo ? '<div class="detalhe-codigo">Código: ' + p.codigo + '</div>' : ''}
+        ${p.categoria ? '<div class="detalhe-categoria">Categoria: ' + nomeCategoria(p.categoria) + '</div>' : ''}
+        <p class="detalhe-descricao"><strong>Descrição:</strong> ${p.descricao || 'Sem descrição.'}</p>
+        <div id="estoqueVariacao" class="estoque-detalhe">${statusEstoqueHtml(qtdInicial)}<span class="estoque-obs">${qtdInicial > 0 ? '— pronta para envio' : '— avise-me quando chegar'}</span></div>
+        <p class="detalhe-preco">R$${p.preco.toFixed(2).replace('.', ',')}</p>
+        <div class="variacoes-box">
+          <strong>Cor / Modelo</strong>
+          <div class="variacoes-lista">${htmlVariacoes}</div>
+        </div>
+        <div class="detalhe-acoes">
+          <button type="button" id="btnAcaoDetalhe" class="btn-detalhe" onclick="acaoDetalhe(${p.id})">${qtdInicial > 0 ? 'Adicionar ao carrinho' : 'Solicitar (lista de espera)'}</button>
+          <span id="msgVariacao"></span>
         </div>
       </div>
     </div>
@@ -207,23 +235,33 @@ async function abrirDetalhe(id) {
   document.body.style.overflow = 'hidden';
 }
 
-function selecionarVariacao(id, cor) {
+function acaoDetalhe(id) {
   const p = produtos.find(x => x.id === id);
-  if (!p || !p.variacoes) return;
-  const v = p.variacoes.find(x => x.cor === cor);
-  if (!v) return;
-  document.getElementById('imgDetalhe').src = v.imagem;
-  const msg = document.getElementById('msgVariacao');
-  if (msg) msg.textContent = 'Selecionado: ' + cor;
-  // Atualiza botões selecionados
-  const botoes = document.querySelectorAll('#detalhe-panel button[onclick^="selecionarVariacao"]');
-  botoes.forEach(b => { b.style.borderColor = 'transparent'; });
-  event.target.closest('button').style.borderColor = '#A65365';
-  // Reescreve a função global para adicionar com a variação selecionada
-  window.variacaoAtual = v;
+  const v = window.variacaoAtual || (p && p.variacoes && p.variacoes[0]);
+  if (v && variacaoEstoque(v) <= 0) { solicitarEspera(id); return; }
+  adicionarCarrinho(id, v || null);
 }
 
-function fecharDetalhe() { const el = document.getElementById('detalhe-panel'); if (el) { el.remove(); document.body.style.overflow = ''; } window.variacaoAtual = null; }
+function selecionarVariacao(id, indice, botao) {
+  const p = produtos.find(x => x.id === id);
+  if (!p) return;
+  const vars = Array.isArray(p.variacoes) && p.variacoes.length ? p.variacoes : [];
+  const v = vars[indice];
+  if (!v) return;
+  window.variacaoAtual = v;
+  const img = document.getElementById('imgDetalhe');
+  if (img) img.src = v.imagem || p.imagem;
+  const qtd = variacaoEstoque(v);
+  const status = document.getElementById('estoqueVariacao');
+  if (status) status.innerHTML = statusEstoqueHtml(qtd) +
+    '<span class="estoque-obs">' + (qtd > 0 ? '— pronta para envio' : '— avise-me quando chegar') + '</span>';
+  const btn = document.getElementById('btnAcaoDetalhe');
+  if (btn) btn.textContent = qtd > 0 ? 'Adicionar ao carrinho' : 'Solicitar (lista de espera)';
+  const msg = document.getElementById('msgVariacao');
+  if (msg) msg.textContent = 'Selecionado: ' + (v.cor || 'Modelo único');
+  document.querySelectorAll('#detalhe-panel .variacao-opcao').forEach(function (b) { b.classList.remove('selecionada'); });
+  if (botao) botao.classList.add('selecionada');
+}
 
 // Renderização do carrinho
 function renderizarCarrinho() {
@@ -271,6 +309,8 @@ function openBusca() {
   if (c) { c.value = ''; c.focus(); }
   const r = document.getElementById('resultadosBusca');
   if (r) r.innerHTML = '';
+  const contador = document.getElementById('buscaContador');
+  if (contador) contador.textContent = '';
 }
 function fecharBusca() {
   const p = document.getElementById('busca');
@@ -320,22 +360,27 @@ async function executarBusca() {
 
   const div = document.getElementById('resultadosBusca');
   if (!div) return;
+  const contador = document.getElementById('buscaContador');
+  if (contador) contador.textContent = '';
   const algumFiltro = catVal || codTermo || nomeTermo;
   if (!algumFiltro) {
-    div.innerHTML = '<p style="font-size:14px;color:#49383D;opacity:0.7;padding:8px 0;">Informe um filtro ou selecione uma categoria.</p>';
+    div.innerHTML = '<div class="busca-vazio"><span aria-hidden="true">&#9829;</span><p>Informe um nome, código ou categoria para encontrar sua peça.</p></div>';
     return;
   }
   if (resultados.length === 0) {
-    div.innerHTML = '<p style="font-size:14px;color:#49383D;opacity:0.7;padding:8px 0;">Nenhum produto encontrado. Tente outro termo.</p>';
+    div.innerHTML = '<div class="busca-vazio"><span aria-hidden="true">&#10047;</span><p>Nenhum produto encontrado. Tente outro termo ou limpe os filtros.</p></div>';
     return;
   }
+  if (contador) contador.textContent = resultados.length + (resultados.length === 1 ? ' peça encontrada' : ' peças encontradas');
   div.innerHTML = resultados.map(function (p) {
+    const disponivel = estoqueDisponivel(p) > 0;
     return '<a href="#" onclick="abrirDetalhe(' + p.id + '); fecharBusca(); return false;" class="resultado-busca">' +
-      '<img src="' + p.imagem + '" alt="' + p.nome + '" loading="lazy">' +
-      '<div><h4>' + p.nome + '</h4>' +
-        '<div style="font-size:12px;color:#7A5A62;margin-top:2px;">Código: ' + (p.codigo || '—') + ' · ' +
-          (estoqueDisponivel(p) > 0 ? 'Disponível' : 'ESGOTADO') + '</div>' +
-        '<div class="preco">R$' + p.preco.toFixed(2).replace('.', ',') + '</div></div>' +
+      '<span class="resultado-foto"><img src="' + p.imagem + '" alt="' + p.nome + '" loading="lazy"></span>' +
+      '<span class="resultado-info"><strong>' + p.nome + '</strong>' +
+        '<small>Código: ' + (p.codigo || '—') + ' · ' + (p.categoria ? nomeCategoria(p.categoria) : 'Tania Briet') + '</small>' +
+        '<span class="resultado-status ' + (disponivel ? 'ok' : 'off') + '">' + (disponivel ? 'Disponível' : 'ESGOTADO') + '</span>' +
+      '</span>' +
+      '<span class="preco">R$' + p.preco.toFixed(2).replace('.', ',') + '</span>' +
       '</a>';
   }).join('');
 }
@@ -734,6 +779,24 @@ async function obterUsuarioAtual() {
   }
 }
 
+function atualizarMenuPerfil() {
+  const bloco = document.getElementById('menuPerfil');
+  if (!bloco) return;
+  const u = window.usuarioAtual;
+  const nome = document.getElementById('menuPerfilNome');
+  const info = document.getElementById('menuPerfilInfo');
+  const link = document.getElementById('menuPontinhosConta');
+  if (u) {
+    if (nome) nome.textContent = 'Olá, ' + ((u.nome || '').split(' ')[0] || 'cliente');
+    if (info) info.textContent = u.email || 'Área da cliente';
+    if (link) { link.textContent = 'Ver minha conta'; link.href = 'conta.html'; }
+  } else {
+    if (nome) nome.textContent = 'Olá, visitante';
+    if (info) info.textContent = 'Entre ou crie sua conta';
+    if (link) { link.textContent = 'Entrar na minha conta'; link.href = 'login.html'; }
+  }
+}
+
 function atualizarHeaderAuth() {
   let link = document.getElementById('navAuth');
   const nav = document.querySelector('.main-nav');
@@ -756,6 +819,7 @@ function atualizarHeaderAuth() {
     link.href = 'login.html';
     link.onclick = null;
   }
+  atualizarMenuPerfil();
 }
 
 async function cadastrarCliente(event) {
@@ -825,20 +889,61 @@ init = function () {
   obterUsuarioAtual().then(atualizarHeaderAuth);
 };
 
-document.addEventListener('DOMContentLoaded', function () {
-  const contaBox = document.getElementById('contaBox');
-  if (contaBox) {
-    obterUsuarioAtual().then((u) => {
-      if (!u) { window.location.href = 'login.html'; return; }
-      contaBox.innerHTML = '<p><strong>Nome:</strong> ' + u.nome + '</p>' +
-        '<p><strong>E-mail:</strong> ' + u.email + '</p>' +
-        '<p><strong>Telefone:</strong> ' + (u.telefone || '-') + '</p>' +
-        '<p><strong>Perfil:</strong> ' + u.role + '</p>' +
-        '<button class="btn-secundario" onclick="sairCliente()">Sair</button>';
-    });
-  }
-});
+function escConta(v) {
+  return String(v === undefined || v === null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
+async function carregarContaCliente() {
+  const contaBox = document.getElementById('contaBox');
+  if (!contaBox) return;
+  const u = await obterUsuarioAtual();
+  if (!u) { window.location.href = 'login.html'; return; }
+  contaBox.innerHTML = '<div class="conta-perfil">' +
+    '<span class="conta-avatar">&#9829;</span>' +
+    '<div><p class="conta-eyebrow">Área da cliente</p><h3>Olá, ' + escConta((u.nome || '').split(' ')[0] || 'cliente') + '!</h3>' +
+    '<p class="conta-sub">Seus dados e acompanhamentos em um só lugar.</p></div></div>' +
+    '<div class="conta-dados">' +
+      '<div><span>Nome</span><strong>' + escConta(u.nome) + '</strong></div>' +
+      '<div><span>E-mail</span><strong>' + escConta(u.email) + '</strong></div>' +
+      '<div><span>Telefone</span><strong>' + escConta(u.telefone || '-') + '</strong></div>' +
+    '</div>' +
+    '<button type="button" class="busca-btn-limpar" style="margin-top:18px;" onclick="sairCliente()">Sair da conta</button>';
+  const waitBox = document.getElementById('waitlistBox');
+  const pedBox = document.getElementById('pedidosBox');
+  try {
+    const [wr, pr] = await Promise.all([
+      fetch('api/waitlist', { credentials: 'same-origin' }),
+      fetch('api/pedidos', { credentials: 'same-origin' })
+    ]);
+    const lista = wr.ok ? await wr.json() : [];
+    const pedidos = pr.ok ? await pr.json() : [];
+    if (waitBox) {
+      waitBox.innerHTML = lista.length
+        ? '<div class="conta-lista">' + lista.map((w) =>
+            '<div class="conta-linha"><div><strong>' + escConta(w.produto) + '</strong>' +
+            '<small>' + escConta(w.cor || 'Modelo único') + ' · ' + Number(w.quantidade || 1) + ' unidade(s)</small></div>' +
+            '<span class="badge-status ' + (w.status === 'aguardando' ? 'aguardando' : '') + '">' + escConta(w.status) + '</span></div>').join('') + '</div>'
+        : '<p class="conta-vazio">Você ainda não entrou em nenhuma lista de espera.</p>';
+    }
+    if (pedBox) {
+      pedBox.innerHTML = pedidos.length
+        ? '<div class="conta-lista">' + pedidos.map((o) =>
+            '<div class="conta-pedido"><div class="conta-pedido-topo"><strong>' + escConta(o.codigo) + '</strong>' +
+            '<span class="badge-status">' + escConta(o.status) + '</span></div>' +
+            '<small>' + escConta(o.criado_em || '') + '</small>' +
+            (o.itens || []).map((i) => '<div class="conta-pedido-item">' + escConta(i.produto) +
+              (i.cor ? ' — ' + escConta(i.cor) : '') + ' x' + Number(i.quantidade || 1) + '</div>').join('') +
+            '</div>').join('') + '</div>'
+        : '<p class="conta-vazio">Seus pedidos e reservas aparecerão aqui.</p>';
+    }
+  } catch (e) {
+    if (waitBox) waitBox.innerHTML = '<p class="conta-vazio">Não foi possível carregar agora.</p>';
+    if (pedBox) pedBox.innerHTML = '<p class="conta-vazio">Não foi possível carregar agora.</p>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', carregarContaCliente);
 // ===== Busca na interface (Etapa 4) =====
 function popularCategoriasBusca() {
   const sel = document.getElementById('buscaCategoria');
@@ -903,10 +1008,19 @@ document.addEventListener('DOMContentLoaded', function () {
   panel.className = 'menu-pontinhos-panel';
   panel.hidden = true;
   panel.innerHTML =
+    '<div class="menu-pontinhos-perfil" id="menuPerfil">' +
+      '<span class="menu-perfil-avatar" aria-hidden="true">&#9829;</span>' +
+      '<div class="menu-perfil-texto"><strong id="menuPerfilNome">Olá, visitante</strong><small id="menuPerfilInfo">Entre ou crie sua conta</small></div>' +
+    '</div>' +
+    '<a href="conta.html" class="menu-pontinhos-item menu-pontinhos-conta" id="menuPontinhosConta">Minha conta</a>' +
     '<a href="index.html" class="menu-pontinhos-item">Início</a>' +
+    '<a href="categorias.html" class="menu-pontinhos-item">Categorias</a>' +
     '<a href="novidades.html" class="menu-pontinhos-item">Novidades</a>' +
+    '<a href="contato.html" class="menu-pontinhos-item">Contato</a>' +
     '<a href="painel-tania.html" class="menu-pontinhos-item">Área administrativa</a>';
   document.body.appendChild(panel);
+  atualizarMenuPerfil();
+
 
   function posicionar() {
     const rect = btn.getBoundingClientRect();
@@ -963,10 +1077,13 @@ function limparBusca() {
   const cod = document.getElementById('buscaCodigo');
   const nome = document.getElementById('buscaNome');
   const res = document.getElementById('resultadosBusca');
+  const contador = document.getElementById('buscaContador');
   if (cat) cat.value = '';
   if (cod) cod.value = '';
   if (nome) nome.value = '';
   if (res) res.innerHTML = '';
+  if (contador) contador.textContent = '';
+  if (nome) nome.focus();
 }
 
 // Atualiza o catalogo quando a pagina volta a ficar ativa
@@ -1107,18 +1224,24 @@ document.addEventListener('DOMContentLoaded', function () {
     panel.className = 'busca-panel';
     panel.hidden = true;
     panel.innerHTML = '<div class="busca-inner">' +
-      '<h3 style="font-family:\'Montserrat\',sans-serif;font-size:22px;color:#49383D;margin-bottom:12px;">Buscar produtos</h3>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">' +
-        '<div><label style="font-size:13px;font-weight:600;color:#49383D;display:block;margin-bottom:6px;">Categoria</label><select id="buscaCategoria" style="width:100%;padding:10px;border:1px solid rgba(166,83,101,0.25);border-radius:10px;font-size:14px;"></select></div>' +
-        '<div><label style="font-size:13px;font-weight:600;color:#49383D;display:block;margin-bottom:6px;">Código do produto</label><input type="text" id="buscaCodigo" placeholder="Ex.: P0001" style="width:100%;padding:10px;border:1px solid rgba(166,83,101,0.25);border-radius:10px;font-size:14px;box-sizing:border-box;"></div>' +
-        '<div><label style="font-size:13px;font-weight:600;color:#49383D;display:block;margin-bottom:6px;">Nome do produto</label><input type="text" id="buscaNome" placeholder="Digite parte do nome" style="width:100%;padding:10px;border:1px solid rgba(166,83,101,0.25);border-radius:10px;font-size:14px;box-sizing:border-box;"></div>' +
+      '<button type="button" class="busca-fechar" onclick="fecharBusca()" aria-label="Fechar busca">&#10005;</button>' +
+      '<div class="busca-cabecalho">' +
+        '<span class="busca-coracao" aria-hidden="true">&#9829;</span>' +
+        '<div><p class="busca-eyebrow">Tania Briet Acessórios</p>' +
+        '<h3>Encontre sua peça favorita</h3>' +
+        '<p>Nome, código ou cor — o que você procura?</p></div>' +
       '</div>' +
-      '<div style="display:flex;gap:10px;margin-bottom:12px;">' +
-        '<button class="btn-principal" style="width:auto;padding:10px 22px;" onclick="executarBusca()">Filtrar</button>' +
-        '<button class="btn-secundario" onclick="limparBusca()">Limpar filtros</button>' +
+      '<div class="busca-campos">' +
+        '<label class="busca-campo busca-campo-principal"><span>O que você procura?</span><input type="search" id="buscaNome" placeholder="Ex.: bracelete, verde, borboleta..."></label>' +
+        '<label class="busca-campo"><span>Código do produto</span><input type="text" id="buscaCodigo" placeholder="Ex.: P0001"></label>' +
+        '<label class="busca-campo"><span>Categoria</span><select id="buscaCategoria"></select></label>' +
       '</div>' +
-      '<div id="resultadosBusca"></div>' +
-      '<button class="btn-continue" style="margin-top:12px;" onclick="fecharBusca()">Fechar</button>' +
+      '<div class="busca-acoes">' +
+        '<button type="button" class="busca-btn-buscar" onclick="executarBusca()">Buscar peças</button>' +
+        '<button type="button" class="busca-btn-limpar" onclick="limparBusca()">Limpar filtros</button>' +
+      '</div>' +
+      '<div id="buscaContador" class="busca-contador"></div>' +
+      '<div id="resultadosBusca" class="resultados-busca"></div>' +
       '</div>';
     document.body.appendChild(panel);
     let temporizadorBusca = null;

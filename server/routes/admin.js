@@ -7,6 +7,16 @@ const { requireAdmin } = require('../middleware/auth');
 const { notificarCatalogo } = require('../eventos');
 
 const router = express.Router();
+
+// Estoque por cor/modelo: ausente = preserva estoque atual; informado = substitui por ele.
+function estoqueInformado(v) {
+  if (!v) return null;
+  const bruta = v.estoque !== undefined ? v.estoque : v.disponivel;
+  if (bruta === undefined || bruta === null || bruta === '') return null;
+  const n = Number(String(bruta).replace(',', '.'));
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.floor(n);
+}
 const usaBlobs = process.env.TANIA_SERVERLESS === '1';
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'Produtos_imagens', 'uploads');
 if (!usaBlobs && !fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -89,14 +99,16 @@ router.get('/api/admin/produtos', requireAdmin, (req, res) => {
   try {
     const rows = db.prepare('SELECT * FROM products ORDER BY id').all();
     const out = rows.map((p) => {
-      const variants = db.prepare('SELECT id, nome_cor, imagem_url, arquivado FROM product_variants WHERE product_id = ?').all(p.id);
+      const variants = db.prepare(`SELECT pv.id, pv.nome_cor, pv.imagem_url, pv.arquivado, COALESCE(sb.disponivel, 0) AS disponivel
+        FROM product_variants pv LEFT JOIN stock_balances sb ON sb.variant_id = pv.id
+        WHERE pv.product_id = ?`).all(p.id);
       const cat = p.category_id ? db.prepare('SELECT slug FROM categories WHERE id = ?').get(p.category_id) : null;
       return {
         id: p.id, codigo: p.codigo, nome: p.nome, descricao: p.descricao,
         categoria: cat ? cat.slug : '', preco: p.preco_centavos / 100,
         imagem: p.imagem_url, destaque: !!p.destaque, novidade: !!p.novidade,
         arquivado: !!p.arquivado,
-        variacoes: variants.map((v) => ({ id: v.id, cor: v.nome_cor, imagem: v.imagem_url, arquivado: !!v.arquivado }))
+        variacoes: variants.map((v) => ({ id: v.id, cor: v.nome_cor, imagem: v.imagem_url, arquivado: !!v.arquivado, estoque: v.disponivel, disponivel: v.disponivel }))
       };
     });
     res.json(out);
@@ -124,7 +136,8 @@ router.post('/api/admin/produtos', requireAdmin, (req, res) => {
       for (const v of vars) {
         const vi = db.prepare('INSERT INTO product_variants (product_id, nome_cor, imagem_url) VALUES (?,?,?)')
           .run(newId, v.cor || 'Modelo unico', v.imagem || imagem || null);
-        db.prepare('INSERT OR IGNORE INTO stock_balances (variant_id, disponivel, reservada) VALUES (?,?,?)').run(vi.lastInsertRowid, 0, 0);
+        const qtd = estoqueInformado(v);
+        db.prepare('INSERT OR IGNORE INTO stock_balances (variant_id, disponivel, reservada) VALUES (?,?,?)').run(vi.lastInsertRowid, qtd === null ? 0 : qtd, 0);
       }
     });
     notificarCatalogo('produtos');
@@ -179,14 +192,19 @@ router.put('/api/admin/produtos/:id', requireAdmin, (req, res) => {
           const img = v.imagem || imagem || null;
           // Preserva o estoque: prioriza o id existente; se nao houver id, usa a cor.
           const vid = (v.id && porId[v.id]) ? v.id : porCor[cor];
+          const qtd = estoqueInformado(v);
           if (vid) {
             mantidos.add(vid);
             db.prepare('UPDATE product_variants SET nome_cor = ?, imagem_url = COALESCE(?, imagem_url) WHERE id = ?')
               .run(cor, img, vid);
+            if (qtd !== null) {
+              db.prepare('INSERT OR IGNORE INTO stock_balances (variant_id, disponivel, reservada) VALUES (?,?,?)').run(vid, qtd, 0);
+              db.prepare("UPDATE stock_balances SET disponivel = ?, atualizado_em = datetime('now') WHERE variant_id = ?").run(qtd, vid);
+            }
           } else {
             const vi = db.prepare('INSERT INTO product_variants (product_id, nome_cor, imagem_url) VALUES (?,?,?)')
               .run(id, cor, img);
-            db.prepare('INSERT OR IGNORE INTO stock_balances (variant_id, disponivel, reservada) VALUES (?,?,?)').run(vi.lastInsertRowid, 0, 0);
+            db.prepare('INSERT OR IGNORE INTO stock_balances (variant_id, disponivel, reservada) VALUES (?,?,?)').run(vi.lastInsertRowid, qtd === null ? 0 : qtd, 0);
             mantidos.add(Number(vi.lastInsertRowid));
           }
         }

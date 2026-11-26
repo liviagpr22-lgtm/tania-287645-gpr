@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=16">
+<link rel="stylesheet" href="style.css?v=17">
 <link rel="stylesheet" href="admin.css?v=16">
 </head>
 <body class="admin-body">
@@ -123,11 +123,16 @@
               <label for="cor">Cor / Modelo (opcional)</label>
               <input type="text" id="cor" placeholder="Ex.: Dourado com pedra verde">
             </div>
+            <div>
+              <label for="estoqueProduto">Estoque inicial (sem cor/modelo)</label>
+              <input type="number" id="estoqueProduto" min="0" step="1" value="0" placeholder="0 = esgotado">
+            </div>
             <div class="full">
               <button type="button" id="btnCores" class="btn-secundario" onclick="alternarCores()" style="width:100%;">Cores / modelos (fotos diferentes)</button>
               <div id="secaoCores" style="display:none;margin-top:10px;padding:12px;border:1px dashed rgba(166,83,101,0.3);border-radius:12px;background:#FFFCFA;">
-                <p class="dica">Adicione cada cor ou modelo com sua própria foto. Ex.: Dourado, Prata, Rosa.</p>
+                <p class="dica">Adicione cada cor ou modelo com sua própria foto e estoque. Ex.: Dourado, Prata, Rosa. Cada um aparece separado no estoque.</p>
                 <input type="text" id="corVariacao" placeholder="Nome da cor ou modelo" onkeydown="if(event.key==='Enter'){event.preventDefault();adicionarVariacao();}">
+                <input type="number" id="estoqueVariacao" min="0" step="1" value="0" placeholder="Estoque desta cor (0 = esgotado)" style="margin-top:8px;">
                 <input type="file" id="arquivoFotoVariacao" accept="image/*" onchange="aoEscolherFotoVariacao(this)" style="margin-top:8px;">
                 <input type="text" id="urlFotoVariacao" placeholder="URL da foto dessa cor (opcional)" oninput="aoDigitarUrlVariacao(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();adicionarVariacao();}" style="margin-top:8px;">
                 <img id="previewFotoVariacao" class="preview-foto" alt="Prévia da cor" style="display:none;max-height:90px;margin-top:8px;">
@@ -272,8 +277,8 @@
 </main>
 
 <script src="dados-snapshot.js"></script>
-<script src="script.js?v=47"></script>
-<script src="admin.js?v=27"></script>
+<script src="script.js?v=48"></script>
+<script src="admin.js?v=28"></script>
 <script>
 const STATUS_OPTS = ['Solicitado','Reservado','Aguardando pagamento','Pago','Concluído/Entregue','Cancelado','Lista de espera'];
 

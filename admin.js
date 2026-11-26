@@ -18,6 +18,17 @@ let fotoVariacaoEscolhida = null;
 
 function clonar(obj) { return JSON.parse(JSON.stringify(obj)); }
 
+// Cada cor/modelo tem seu proprio estoque; valor invalido ou vazio = nao alterar.
+function numeroEstoque(valor) {
+  if (valor === undefined || valor === null || valor === '') return 0;
+  const n = Number(String(valor).replace(',', '.'));
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+function estoqueDaVariacao(v) {
+  if (!v) return 0;
+  return numeroEstoque(v.estoque !== undefined ? v.estoque : v.disponivel);
+}
+
 function esc(texto) {
   return String(texto == null ? '' : texto)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -289,7 +300,8 @@ function adicionarVariacao() {
   }
   const urlEl = document.getElementById('urlFotoVariacao');
   const imagem = fotoVariacaoEscolhida || (urlEl ? (urlEl.value || '').trim() : '') || imagemEscolhida || './Produtos_imagens/Vale Presente/vale presente.jfif';
-  variacoesFormulario.push({ cor: cor, imagem: imagem });
+  const estoqueEl = document.getElementById('estoqueVariacao');
+  variacoesFormulario.push({ cor: cor, imagem: imagem, estoque: numeroEstoque(estoqueEl ? estoqueEl.value : 0) });
   renderizarVariacoes();
   if (campo) campo.value = '';
   if (urlEl) urlEl.value = '';
@@ -297,12 +309,18 @@ function adicionarVariacao() {
   if (fileEl) fileEl.value = '';
   const prev = document.getElementById('previewFotoVariacao');
   if (prev) { prev.removeAttribute('src'); prev.style.display = 'none'; }
+  if (estoqueEl) estoqueEl.value = '0';
   fotoVariacaoEscolhida = null;
   mensagem('Cor/modelo adicionado ao produto.');
 }
 function removerVariacao(indice) {
   variacoesFormulario.splice(indice, 1);
   renderizarVariacoes();
+}
+function alterarEstoqueVariacao(indice, valor) {
+  if (!variacoesFormulario[indice]) return;
+  variacoesFormulario[indice].estoque = numeroEstoque(valor);
+  mensagem('Estoque da cor/modelo atualizado no produto.');
 }
 function renderizarVariacoes() {
   const box = document.getElementById('listaVariacoes');
@@ -315,6 +333,8 @@ function renderizarVariacoes() {
     return '<div class="item-simples variacao-item" style="display:flex;align-items:center;gap:10px;padding:8px;margin-top:8px;background:#fff;border-radius:10px;">' +
       '<img src="' + esc(v.imagem) + '" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px;">' +
       '<span style="flex:1;min-width:0;font-size:13px;color:#49383D;">' + esc(v.cor) + '</span>' +
+      '<label style="font-size:11px;color:#A65365;font-weight:600;">Estoque ' +
+        '<input type="number" min="0" step="1" value="' + estoqueDaVariacao(v) + '" onchange="alterarEstoqueVariacao(' + i + ', this.value)" aria-label="Estoque de ' + esc(v.cor) + '" style="width:82px;padding:7px;border:1px solid rgba(166,83,101,0.25);border-radius:8px;font-size:13px;"></label>' +
       '<button type="button" class="btn-mini perigo" onclick="removerVariacao(' + i + ')">Remover</button>' +
       '</div>';
   }).join('');
@@ -331,6 +351,8 @@ async function salvarProduto(event) {
   if (!categoria && atualEdicao && atualEdicao.categoria) categoria = atualEdicao.categoria;
   if (!categoria) categoria = 'braceletes';
   const cor = (document.getElementById('cor').value || '').trim() || 'Modelo unico';
+  const estoqueElSalvar = document.getElementById('estoqueProduto');
+  const estoqueProduto = numeroEstoque(estoqueElSalvar ? estoqueElSalvar.value : 0);
   if (!nome) { mensagem('Informe o nome do produto.', true); return; }
   if (!isFinite(preco) || preco <= 0) { mensagem('Informe um preco valido.', true); return; }
   let imagem = imagemEscolhida;
@@ -351,12 +373,12 @@ async function salvarProduto(event) {
       usouPadrao = false;
     }
     variacoes = variacoesFormulario.map(function (v) {
-      const out = { cor: v.cor, imagem: v.imagem };
+      const out = { cor: v.cor, imagem: v.imagem, estoque: estoqueDaVariacao(v) };
       if (v.id) out.id = v.id;
       return out;
     });
   } else if (imagemAlterada || editandoId === null) {
-    variacoes = [{ cor: cor, imagem: imagem }];
+    variacoes = [{ cor: cor, imagem: imagem, estoque: estoqueProduto }];
   } else {
     const antigo = listaProdutos.find(function (p) { return p.id === editandoId; });
     variacoes = (antigo && Array.isArray(antigo.variacoes) && antigo.variacoes.length) ? clonar(antigo.variacoes) : [{ cor: cor, imagem: imagem }];
@@ -419,7 +441,7 @@ function editarProduto(id) {
   }
   if (selCat) selCat.value = catAtual;
   variacoesFormulario = Array.isArray(p.variacoes) ? clonar(p.variacoes).map(function (v) {
-    return { id: v.id, cor: v.cor || '', imagem: v.imagem || p.imagem || '' };
+    return { id: v.id, cor: v.cor || '', imagem: v.imagem || p.imagem || '', estoque: estoqueDaVariacao(v) };
   }) : [];
   renderizarVariacoes();
   const secaoCoresEdit = document.getElementById('secaoCores');
@@ -427,6 +449,8 @@ function editarProduto(id) {
   const btnCoresEdit = document.getElementById('btnCores');
   if (btnCoresEdit && variacoesFormulario.length) btnCoresEdit.textContent = 'Fechar cores / modelos';
   document.getElementById('cor').value = (p.variacoes && p.variacoes[0]) ? (p.variacoes[0].cor || '') : '';
+  const estoqueEdit = document.getElementById('estoqueProduto');
+  if (estoqueEdit) estoqueEdit.value = String(estoqueDaVariacao(p.variacoes && p.variacoes[0]));
   const destaqueEdit = document.getElementById('destaque');
   const novidadeEdit = document.getElementById('novidade');
   if (destaqueEdit) destaqueEdit.checked = !!p.destaque;
@@ -463,7 +487,7 @@ function carregarListaServidor() {
     .then(function (r) { if (erroAutenticacao(r)) return []; return r.json(); })
     .then(function (arr) {
       if (Array.isArray(arr)) { listaProdutos = arr.map(function (p) {
-        return { id: p.id, codigo: p.codigo, nome: p.nome, descricao: p.descricao, preco: p.preco, categoria: p.categoria, imagem: p.imagem, variacoes: p.variacoes, destaque: p.destaque, novidade: p.novidade, arquivado: p.arquivado };
+        return { id: p.id, codigo: p.codigo, nome: p.nome, descricao: p.descricao, preco: p.preco, categoria: p.categoria, imagem: p.imagem, estoque: p.estoque, variacoes: p.variacoes, destaque: p.destaque, novidade: p.novidade, arquivado: p.arquivado };
       }); renderizarLista(); atualizarResumo(); }
     })
     .catch(function () {});
@@ -478,6 +502,8 @@ function limparFormulario() {
   if (destaqueClear) destaqueClear.checked = false;
   if (novidadeClear) novidadeClear.checked = false;
   editandoId = null;
+  const estoqueClear = document.getElementById('estoqueProduto');
+  if (estoqueClear) estoqueClear.value = '0';
   imagemEscolhida = null;
   imagemAlterada = false;
   variacoesFormulario = [];
