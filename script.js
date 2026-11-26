@@ -1,4 +1,4 @@
-const VERSAO_SCRIPT_ATUAL = 49;
+const VERSAO_SCRIPT_ATUAL = 50;
 
 // Abertura pelo arquivo (file://) nao consegue chamar a API. Avisa e usa o atalho.
 if (!/^https?:$/.test(location.protocol)) {
@@ -49,6 +49,39 @@ function statusEstoqueHtml(qtd) {
     ? '<span class="status-variacao disponivel">Disponível: ' + qtd + '</span>'
     : '<span class="status-variacao esgotado">ESGOTADO</span>';
 }
+
+// Cards da tela inicial/pagina de categorias vindos do banco:
+// ao adicionar ou arquivar categoria no painel, a lista muda sem editar HTML.
+const IMAGENS_CATEGORIA_PADRAO = {
+  bijuterias: './Produtos_imagens/Braceletes/Bracelete Borboleta Folheado a Ouro.jfif',
+  cabelo: './Produtos_imagens/Piranhas de Cabelo/Piranha de Cabelo Maxi Borboleta Rendada/Piranha de Cabelo Maxi Borboleta Rendada.jfif',
+  maquiagem: './Produtos_imagens/Maquiagem/Batom/Batom Líquido Matte Ovo da Vivai.jfif',
+  roupas: './Produtos_imagens/Roupas/Blusa Básica Feminina de Manga Longa/Nude.jfif',
+  chinelo: './Produtos_imagens/Chinelo/Havaianas Square, Glitter & Farm/Havaianas Square Marsala.jfif',
+  presentes: './Produtos_imagens/Vale Presente/vale presente.jfif'
+};
+
+function renderizarCategoriasCards() {
+  const grids = document.querySelectorAll('.categories-grid');
+  if (!grids.length) return;
+  const principais = (Array.isArray(categoriasLista) ? categoriasLista : [])
+    .filter(function (c) { return c && c.ativa !== 0 && !c.parent_id; })
+    .slice()
+    .sort(function (a, b) { return (Number(a.ordem) || 0) - (Number(b.ordem) || 0); });
+  if (!principais.length) return;
+  grids.forEach(function (grid) {
+    grid.innerHTML = principais.map(function (c) {
+      const slug = String(c.slug || '');
+      const imagem = IMAGENS_CATEGORIA_PADRAO[slug] ||
+        ((produtos.find(function (p) { return p.categoria === slug; }) || {}).imagem) ||
+        './Produtos_imagens/Vale Presente/vale presente.jfif';
+      return '<a href="categorias.html?categoria=' + encodeURIComponent(slug) + '" class="cat-card">' +
+        '<img class="cat-icon" src="' + esc(imagem) + '" alt="' + esc(c.nome || slug) + '" loading="lazy">' +
+        '<h3>' + esc(c.nome || slug) + '</h3>' +
+        '</a>';
+    }).join('');
+  });
+}
 // Configuração
 const WHATSAPP_NUMERO = '+5512981883097';
 const WHATSAPP_LINK = 'https://wa.me/' + WHATSAPP_NUMERO;
@@ -68,12 +101,13 @@ function aplicarProdutos(arr) {
     if (p.destaque) DESTAQUES_IDS.push(p.id);
     if (p.novidade) NOVIDADES_IDS.push(p.id);
   });
+  renderizarCategoriasCards();
 }
 
 // Sincroniza com o servidor (mesma lista em todos os dispositivos)
 function aplicarSnapshot() {
   try {
-    if (Array.isArray(window.categoriasSnapshot) && window.categoriasSnapshot.length) categoriasLista = window.categoriasSnapshot;
+    if (Array.isArray(window.categoriasSnapshot) && window.categoriasSnapshot.length) { categoriasLista = window.categoriasSnapshot; renderizarCategoriasCards(); }
     if (Array.isArray(window.produtosSnapshot) && window.produtosSnapshot.length) { aplicarProdutos(window.produtosSnapshot); return true; }
   } catch (e) {}
   return false;
@@ -81,7 +115,7 @@ function aplicarSnapshot() {
 function carregarCategoriasDoServidor() {
   return fetch('api/categorias?t=' + Date.now(), { cache: 'no-store' })
     .then(function (r) { if (!r.ok) throw new Error('falha'); return r.json(); })
-    .then(function (arr) { if (Array.isArray(arr)) categoriasLista = arr; })
+    .then(function (arr) { if (Array.isArray(arr)) { categoriasLista = arr; renderizarCategoriasCards(); } })
     .catch(function () { aplicarSnapshot(); });
 }
 function carregarProdutosDoServidor() {
@@ -248,6 +282,43 @@ function fecharDetalhe() {
     (carrinho && !carrinho.hidden) ||
     (busca && !busca.hidden);
   document.body.style.overflow = haOutroOverlay ? 'hidden' : '';
+}
+
+// Olhinho para mostrar/ocultar senha em todos os formularios.
+const ICONE_OLHO_ABERTO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+const ICONE_OLHO_FECHADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>';
+
+function alternarVisibilidadeSenha(botao) {
+  const input = document.getElementById(botao.getAttribute('data-senha'));
+  if (!input) return;
+  const mostrar = input.type === 'password';
+  input.type = mostrar ? 'text' : 'password';
+  botao.classList.toggle('visivel', mostrar);
+  botao.setAttribute('aria-label', mostrar ? 'Ocultar senha' : 'Mostrar senha');
+  botao.title = mostrar ? 'Ocultar senha' : 'Mostrar senha';
+  botao.innerHTML = mostrar ? ICONE_OLHO_FECHADO : ICONE_OLHO_ABERTO;
+  input.focus();
+}
+
+function instalarOlhosSenha() {
+  document.querySelectorAll('input[type="password"]').forEach(function (input) {
+    if (input.dataset.olhoInstalado === '1') return;
+    input.dataset.olhoInstalado = '1';
+    if (!input.id) input.id = 'senha-' + Math.random().toString(36).slice(2);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'senha-campo';
+    input.parentNode.insertBefore(wrapper, input);
+    wrapper.appendChild(input);
+    const botao = document.createElement('button');
+    botao.type = 'button';
+    botao.className = 'olho-senha';
+    botao.setAttribute('data-senha', input.id);
+    botao.setAttribute('aria-label', 'Mostrar senha');
+    botao.title = 'Mostrar senha';
+    botao.innerHTML = ICONE_OLHO_ABERTO;
+    botao.onclick = function () { alternarVisibilidadeSenha(botao); };
+    wrapper.appendChild(botao);
+  });
 }
 
 function acaoDetalhe(id) {
@@ -672,6 +743,7 @@ function rolarParaProdutosDaCategoria(categoria) {
 // Inicialização
 function init() {
   atualizarMenuAtivo();
+  renderizarCategoriasCards();
   const grid = document.getElementById('produtosGrid');
   if (grid) {
     const caminho = window.location.pathname.toLowerCase();
@@ -1125,7 +1197,7 @@ async function sincronizarCatalogo(forcar) {
     const assinatura = JSON.stringify(cats) + JSON.stringify(arr);
     if (assinatura === assinaturaCatalogo) return;
     assinaturaCatalogo = assinatura;
-    if (Array.isArray(cats)) categoriasLista = cats;
+    if (Array.isArray(cats)) { categoriasLista = cats; renderizarCategoriasCards(); }
     aplicarProdutos(arr);
     try { localStorage.setItem('tania_produtos', JSON.stringify(arr)); } catch (e) {}
     const temOverlay = document.getElementById('detalhe-panel') ||
@@ -1281,6 +1353,7 @@ document.addEventListener('DOMContentLoaded', function () {
     btnPainel.onclick = openBusca;
     topoPainel.appendChild(btnPainel);
   }
+  instalarOlhosSenha();
 });
 
 
@@ -1319,6 +1392,7 @@ function abrirAuth(acao, extra) {
   </div>`;
   document.body.appendChild(el);
   document.body.style.overflow = 'hidden';
+  instalarOlhosSenha();
   setTimeout(function () { const c = document.getElementById('authEmail'); if (c) c.focus(); }, 60);
 }
 

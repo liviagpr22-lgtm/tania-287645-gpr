@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=17">
+<link rel="stylesheet" href="style.css?v=18">
 <link rel="stylesheet" href="admin.css?v=16">
 </head>
 <body class="admin-body">
@@ -277,7 +277,7 @@
 </main>
 
 <script src="dados-snapshot.js"></script>
-<script src="script.js?v=49"></script>
+<script src="script.js?v=50"></script>
 <script src="admin.js?v=28"></script>
 <script>
 const STATUS_OPTS = ['Solicitado','Reservado','Aguardando pagamento','Pago','Concluído/Entregue','Cancelado','Lista de espera'];
@@ -369,6 +369,7 @@ async function adicionarCategoria(event) {
       document.getElementById('novaCategoriaPai').value = '';
       carregarCategoriasAdmin();
       popularCategoriasForm();
+      if (typeof atualizarAposEventoCatalogo === 'function') atualizarAposEventoCatalogo();
     } else {
       alert(d.erro || 'Falha ao adicionar categoria.');
     }
@@ -379,8 +380,10 @@ async function arquivarCategoria(id) {
   try {
     const r = await fetch('api/admin/categorias/' + id, { method: 'DELETE', credentials: 'same-origin' });
     const d = await r.json();
-    if (r.ok) carregarCategoriasAdmin();
-    else alert(d.erro || 'Falha.');
+    if (r.ok) {
+      carregarCategoriasAdmin();
+      if (typeof atualizarAposEventoCatalogo === 'function') atualizarAposEventoCatalogo();
+    } else alert(d.erro || 'Falha.');
   } catch (e) { alert('Erro de conexao.'); }
 }
 function popularCategoriasPai(cats) {

@@ -897,3 +897,49 @@ body {
   .busca-campos { grid-template-columns: 1fr; }
   .busca-campo-principal { grid-column: auto; }
 }
+
+/* ===== Olhinho de senha e categorias dinamicas ===== */
+.senha-campo {
+  position: relative;
+  margin-bottom: 18px;
+}
+.senha-campo input {
+  width: 100% !important;
+  padding-right: 48px !important;
+  margin-bottom: 0 !important;
+}
+.login-card .senha-campo {
+  margin-bottom: 20px;
+}
+.olho-senha {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: #A65365;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.olho-senha:hover,
+.olho-senha.visivel {
+  background: rgba(166,83,101,0.10);
+  color: #7E3F50;
+}
+.olho-senha:focus-visible {
+  outline: 2px solid #A65365;
+  outline-offset: 2px;
+}
+.olho-senha svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
